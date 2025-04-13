@@ -23,7 +23,7 @@ A lightweight browser extension to instantly search selected IP addresses, domai
 
 ### Firefox / LibreWolf (Temporary Load)
 1. Download or clone this repo
-2. Go to `about:debugging` → **This Firefox**
+2. Go to `about:debugging` → **This Firefox / LibreWolf**
 3. Click **Load Temporary Add-on**
 4. Select the `manifest.json` file in this folder
 
