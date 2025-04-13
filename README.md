@@ -4,7 +4,7 @@ A lightweight browser extension to instantly search selected IP addresses, domai
 
 ---
 
-## 🔥 Features
+### 🔥 Features
 
 - 🔍 One-click context menu search for:
   - IP addresses
@@ -19,35 +19,27 @@ A lightweight browser extension to instantly search selected IP addresses, domai
 
 ---
 
-## 📦 Installation
+### 📦 Installation
 
-### Firefox / LibreWolf (Temporary Load)
+#### Firefox / LibreWolf (Temporary Load)
 1. Download or clone this repo
 2. Go to `about:debugging` → **This Firefox / LibreWolf**
 3. Click **Load Temporary Add-on**
 4. Select the `manifest.json` file in this folder
 
-### Permanent Installation
+#### Permanent Installation
 
-Awaiting review by Mozilla.
-
-Once approved, a signed `.xpi` file will be available for download and manual installation.
+Awaiting review by Mozilla. Once approved, a signed `.xpi` file will be available for download and manual installation.
 
 
 ---
 
-## 🛡️ Privacy
+### 🛡️ Privacy
 
 This extension does **not** collect, store, or transmit any data. All functionality is local and user-triggered.
 
 ---
 
-## 📄 License
-
-MIT — do whatever you want, just don’t be evil.
-
----
-
-## Author
-
-Created by someone who got tired of clicking through 5 tabs just to check an IP. Contributions welcome.
+### 📄 License & Author
+- MIT — do whatever you want, just don’t be evil.
+- Created by someone who got tired of clicking through 5 tabs just to check an IP. Contributions welcome.
