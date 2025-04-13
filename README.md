@@ -48,6 +48,6 @@ MIT — do whatever you want, just don’t be evil.
 
 ---
 
-## 🙌 Credits
+## Author
 
-Created by a cybersecurity analyst who wanted less clicks and more recon. Feel free to fork or improve.
+Created by someone who got tired of clicking through 5 tabs just to check an IP. Contributions welcome.
