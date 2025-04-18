@@ -19,17 +19,13 @@ A lightweight browser extension to instantly search selected IP addresses, domai
 
 ---
 
-### 📦 Installation
+### 📦 Installation [![AMO](https://img.shields.io/amo/v/threat-intel-search?label=Firefox%20Add-on&color=blue)](https://addons.mozilla.org/en-US/firefox/addon/threat-intel-search/)
 
-#### Firefox / LibreWolf (Temporary Load)
-1. Download or clone this repo
-2. Go to `about:debugging` → **This Firefox / LibreWolf**
-3. Click **Load Temporary Add-on**
-4. Select the `manifest.json` file in this folder
+The extension is now live and signed by Mozilla.
 
-#### Permanent Installation
+📦 [Install from Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/threat-intel-search/)
 
-Awaiting review by Mozilla. Once approved, a signed `.xpi` file will be available for download and manual installation.
+Or download the signed `.xpi` manually from the "Versions" section of the add-on page if you prefer offline installation.
 
 
 ---
