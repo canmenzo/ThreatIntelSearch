@@ -23,10 +23,10 @@ A lightweight browser extension to instantly search selected IP addresses, domai
 
 The extension is now live and signed by Mozilla.
 
-📦 [Install from Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/threat-intel-search/)
+- 🔗 [Install from Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/threat-intel-search/)
+- 📥 [Download signed `.xpi` from GitHub Releases](https://github.com/canmenzo/ThreatIntelSearch/releases/latest)
 
-Or download the signed `.xpi` manually from the "Versions" section of the add-on page if you prefer offline installation.
-
+To install manually, download the `.xpi` and drag it into `about:addons` in Firefox or LibreWolf.
 
 ---
 
