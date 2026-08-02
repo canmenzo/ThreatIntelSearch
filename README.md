@@ -21,12 +21,20 @@ A lightweight browser extension to instantly search selected IP addresses, domai
 
 ### 📦 Installation [![AMO](https://img.shields.io/amo/v/threat-intel-search?label=Firefox%20Add-on&color=blue)](https://addons.mozilla.org/en-US/firefox/addon/threat-intel-search/)
 
-The extension is now live and signed by Mozilla.
+**Firefox** — live and signed by Mozilla.
 
 - 🔗 [Install from Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/threat-intel-search/)
 - 📥 [Download signed `.xpi` from GitHub Releases](https://github.com/canmenzo/ThreatIntelSearch/releases/latest)
 
 To install manually, download the `.xpi` and drag it into `about:addons` in Firefox or LibreWolf.
+
+**Chrome / Edge / Brave** — not on the Web Store, load it yourself:
+
+1. Open `chrome://extensions`
+2. Enable **Developer mode**
+3. **Load unpacked** → select the `chrome/` folder
+
+The Firefox version lives in the repo root (Manifest V2); the Chrome version is in `chrome/` (Manifest V3).
 
 ---
 
