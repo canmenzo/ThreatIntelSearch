@@ -28,7 +28,7 @@ A lightweight browser extension to instantly search selected IP addresses, domai
 
 To install manually, download the `.xpi` and drag it into `about:addons` in Firefox or LibreWolf.
 
-**Chrome / Edge / Brave** — not on the Web Store, load it yourself:
+**Chrome / Edge / Brave** — submitted to the Chrome Web Store, pending review. Until it lands, load it yourself:
 
 1. Open `chrome://extensions`
 2. Enable **Developer mode**
@@ -40,7 +40,7 @@ The Firefox version lives in the repo root (Manifest V2); the Chrome version is 
 
 ### 🛡️ Privacy
 
-This extension does **not** collect, store, or transmit any data. All functionality is local and user-triggered.
+This extension does **not** collect, store, or transmit any data. All functionality is local and user-triggered. Full policy: [PRIVACY.md](PRIVACY.md).
 
 ---
 
