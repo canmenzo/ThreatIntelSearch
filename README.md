@@ -19,22 +19,23 @@ A lightweight browser extension to instantly search selected IP addresses, domai
 
 ---
 
-### 📦 Installation [![AMO](https://img.shields.io/amo/v/threat-intel-search?label=Firefox%20Add-on&color=blue)](https://addons.mozilla.org/en-US/firefox/addon/threat-intel-search/)
+### 📦 Installation
 
-**Firefox** — live and signed by Mozilla.
+#### Option 1 — Official stores (recommended, auto-updates)
 
-- 🔗 [Install from Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/threat-intel-search/)
-- 📥 [Download signed `.xpi` from GitHub Releases](https://github.com/canmenzo/ThreatIntelSearch/releases/latest)
+| Browser | Store |
+|---|---|
+| Firefox, LibreWolf | [![AMO](https://img.shields.io/amo/v/threat-intel-search?label=Firefox%20Add-ons&color=blue)](https://addons.mozilla.org/en-US/firefox/addon/threat-intel-search/) |
+| Chrome, Edge, Brave | ![CWS](https://img.shields.io/badge/Chrome%20Web%20Store-pending%20review-lightgrey) |
 
-To install manually, download the `.xpi` and drag it into `about:addons` in Firefox or LibreWolf.
+#### Option 2 — Manual install
 
-**Chrome / Edge / Brave** — submitted to the Chrome Web Store, pending review. Until it lands, load it yourself:
+Grab the file for your browser from the [latest release](https://github.com/canmenzo/ThreatIntelSearch/releases/latest):
 
-1. Open `chrome://extensions`
-2. Enable **Developer mode**
-3. **Load unpacked** → select the `chrome/` folder
+- **Firefox** — download `threat_intel_search-1.1.xpi` and drag it into `about:addons`.
+- **Chrome / Edge / Brave / Opera** — download and unzip `threat_intel_search-chrome-1.1.zip`, then open `chrome://extensions`, enable **Developer mode**, and click **Load unpacked** on the unzipped folder.
 
-The Firefox version lives in the repo root (Manifest V2); the Chrome version is in `chrome/` (Manifest V3).
+You can also load straight from a clone: the Firefox build is the repo root (Manifest V2), the Chrome build is `chrome/` (Manifest V3).
 
 ---
 
