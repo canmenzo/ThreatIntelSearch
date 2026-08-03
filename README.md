@@ -2,6 +2,10 @@
 
 A lightweight browser extension to instantly search selected IP addresses, domains, or hashes across popular threat intelligence platforms — all from the right-click menu.
 
+[![Firefox Add-ons](https://img.shields.io/amo/v/threat-intel-search?label=Firefox%20Add-ons&color=blue)](https://addons.mozilla.org/en-US/firefox/addon/threat-intel-search/)
+[![Chrome Web Store](https://img.shields.io/chrome-web-store/v/lmjmpdlnhndlndeiofcfimainondjbcg?label=Chrome%20Web%20Store&color=blue)](https://chromewebstore.google.com/detail/threat-intel-search/lmjmpdlnhndlndeiofcfimainondjbcg)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+
 ---
 
 ### 🔥 Features
@@ -25,10 +29,10 @@ A lightweight browser extension to instantly search selected IP addresses, domai
 
 | Browser | Store |
 |---|---|
-| Firefox, LibreWolf | [![AMO](https://img.shields.io/amo/v/threat-intel-search?label=Firefox%20Add-ons&color=blue)](https://addons.mozilla.org/en-US/firefox/addon/threat-intel-search/) |
-| Chrome, Edge, Brave | ![CWS](https://img.shields.io/badge/Chrome%20Web%20Store-pending%20review-lightgrey) |
+| Firefox, LibreWolf | [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/threat-intel-search/) |
+| Chrome, Edge, Brave, Opera | [Chrome Web Store](https://chromewebstore.google.com/detail/threat-intel-search/lmjmpdlnhndlndeiofcfimainondjbcg) |
 
-#### Option 2 — Manual install
+#### Option 2 — Manual install (no auto-updates)
 
 Grab the file for your browser from the [latest release](https://github.com/canmenzo/ThreatIntelSearch/releases/latest):
 
