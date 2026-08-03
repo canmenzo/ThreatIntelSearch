@@ -2,6 +2,10 @@
 
 Not part of the extension package. Excluded from the upload zip.
 
+**Published 2026-08-03** — item ID `lmjmpdlnhndlndeiofcfimainondjbcg`,
+listing: https://chromewebstore.google.com/detail/threat-intel-search/lmjmpdlnhndlndeiofcfimainondjbcg
+Keep the copy below in sync with the live listing when publishing an update.
+
 ## Store listing
 
 **Item name**
