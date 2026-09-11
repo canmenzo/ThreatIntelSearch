@@ -1,51 +1,46 @@
-const searchTargets = {
-  ip: [
-    "https://www.virustotal.com/gui/ip-address/%s/detection/",
-    "https://otx.alienvault.com/indicator/ip/%s",
-    "https://www.abuseipdb.com/check/%s",
-    "https://www.maxmind.com/en/geoip-web-services-demo?ip_address=%s"
-  ],
-  domain: [
-    "https://www.virustotal.com/gui/domain/%s/detection",
-    "https://otx.alienvault.com/indicator/domain/%s",
-    "https://www.abuseipdb.com/check/%s"
-  ],
-  hash: [
-    "https://www.virustotal.com/gui/file/%s/detection"
-  ]
-};
+// Mirrors ../background.js. The two differ only in how common.js is loaded and when the
+// menus are registered (MV3 service worker here, MV2 event page there). Keep the rest identical.
+
+importScripts("common.js");
+
+const MENU = [
+  { id: "auto", title: "🔎 Threat Intel Search" },
+  { id: "sep", type: "separator" },
+  { id: "ip", title: "🔎 I (IP Address)" },
+  { id: "domain", title: "🔎 D (Domain)" },
+  { id: "hash", title: "🔎 H (Hash)" }
+];
+const PANEL_WIDTH = 380;
+const PANEL_HEIGHT = 640;
 
 function createMenus() {
-  chrome.contextMenus.removeAll(() => {
-    chrome.contextMenus.create({
-      id: "ip",
-      title: "🔎 I (IP Address)",
-      contexts: ["selection"]
-    });
-
-    chrome.contextMenus.create({
-      id: "domain",
-      title: "🔎 D (Domain)",
-      contexts: ["selection"]
-    });
-
-    chrome.contextMenus.create({
-      id: "hash",
-      title: "🔎 H (Hash)",
-      contexts: ["selection"]
-    });
+  api.contextMenus.removeAll(() => {
+    for (const item of MENU) api.contextMenus.create({ ...item, contexts: ["selection"] });
   });
 }
 
-chrome.runtime.onInstalled.addListener(createMenus);
-chrome.runtime.onStartup.addListener(createMenus);
-
-chrome.contextMenus.onClicked.addListener((info) => {
-  const query = encodeURIComponent(info.selectionText.trim());
-  const targets = searchTargets[info.menuItemId];
-  if (!targets) return;
-
-  for (const url of targets) {
-    chrome.tabs.create({ url: url.replace(/%s/g, query) });
+async function openPanel(query, windowId) {
+  // Reuse the open panel if there is one; it answers with its window id.
+  const open = await api.runtime.sendMessage({ showPanel: query }).catch(() => null);
+  if (open) {
+    if (open.windowId != null) api.windows.update(open.windowId, { focused: true });
+    return;
   }
+  const opts = { url: api.runtime.getURL(`panel.html?${query}`), type: "popup", width: PANEL_WIDTH, height: PANEL_HEIGHT };
+  const w = windowId != null && (await api.windows.get(windowId).catch(() => null));
+  if (w) {
+    opts.left = w.left + w.width - PANEL_WIDTH - 24;
+    opts.top = w.top + 80;
+  }
+  api.windows.create(opts);
+}
+
+api.contextMenus.onClicked.addListener((info, tab) => {
+  const type = TYPES.includes(info.menuItemId) ? info.menuItemId : "";
+  const raw = (info.selectionText || "").trim();
+  const query = new URLSearchParams({ ioc: normalize(raw, type), type, raw: raw.slice(0, 300), win: tab?.windowId ?? "" });
+  openPanel(query.toString(), tab?.windowId);
 });
+
+api.runtime.onInstalled.addListener(createMenus);
+api.runtime.onStartup.addListener(createMenus);
