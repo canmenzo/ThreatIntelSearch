@@ -1,8 +1,8 @@
-# Chrome Web Store submission — copy/paste reference
+# Chrome Web Store submission: copy/paste reference
 
 Not part of the extension package. Excluded from the upload zip.
 
-**Published 2026-08-03** — item ID `lmjmpdlnhndlndeiofcfimainondjbcg`,
+**Published 2026-08-03**, item ID `lmjmpdlnhndlndeiofcfimainondjbcg`,
 listing: https://chromewebstore.google.com/detail/threat-intel-search/lmjmpdlnhndlndeiofcfimainondjbcg
 Keep the copy below in sync with the live listing when publishing an update.
 
@@ -15,26 +15,31 @@ Threat Intel Search
 
 **Summary** (132 char max)
 ```
-Right-click any selected IP, domain, or file hash to look it up across VirusTotal, AbuseIPDB, AlienVault OTX, and MaxMind.
+Right-click an IP, domain, or hash for a compact OSINT panel: one-click lookups, plus an optional score from your own API keys.
 ```
 
 **Description**
 ```
-Threat Intel Search adds a right-click menu for analysts who are tired of opening five tabs to check one indicator.
+Threat Intel Search is for analysts who are tired of opening five tabs to check one indicator.
 
-Select an IP address, domain, or file hash on any page, right-click, and pick one of three entries:
+Select an IP address, domain, or file hash on any page, right-click, and pick "Threat Intel Search" (auto-detects the type) or force I (IP Address), D (Domain), or H (Hash). The selection is cleaned up first: quotes and URL schemes are stripped, URLs are reduced to their host, and defanged indicators like evil[.]com or hxxp:// are refanged.
 
-- I (IP Address) — VirusTotal, AlienVault OTX, AbuseIPDB, MaxMind
-- D (Domain) — VirusTotal, AlienVault OTX, AbuseIPDB
-- H (Hash) — VirusTotal
+A small panel opens with:
+- the indicator, copyable, with its type
+- a score circle
+- one button per source, each opening that single lookup
+- "Open all" buttons that open every source for the type at once
 
-Each lookup opens in its own tab, so you get the full picture in one action.
+Sources:
+- IP: VirusTotal, AlienVault OTX, AbuseIPDB, MaxMind, GreyNoise, Shodan InternetDB, urlscan.io
+- Domain: VirusTotal, AlienVault OTX, AbuseIPDB, urlscan.io, SecurityTrails, Whois, crt.sh
+- Hash: VirusTotal, AlienVault OTX, MalwareBazaar, Hybrid Analysis
 
-Built for SOC analysts, incident responders, and threat hunters triaging alerts, but useful to anyone who wants a fast second opinion on a suspicious link.
+Optional score: add your own free VirusTotal, AbuseIPDB, or AlienVault OTX API keys in settings and the circle fills in with a weighted score (likely clean / suspicious / malicious) and a breakdown of what each vendor said. One source alone is capped at "suspicious". It is a convenience heuristic, not a verdict. Without keys everything else works exactly the same.
 
-No accounts. No API keys. No configuration.
+Built for SOC analysts, incident responders, and threat hunters triaging alerts.
 
-Privacy: this extension collects nothing. It has no servers, no analytics, and no telemetry. It does not read page content — the only text it ever touches is what you selected, at the moment you click a menu item, and it is used solely to build the URL it opens. The single permission it requests, contextMenus, is what draws the right-click entries.
+Privacy: the extension collects nothing and has no servers, analytics, or telemetry. Keys and a 30-minute result cache stay in local extension storage. Indicators are only sent to the vendors you chose, only when you look one up, straight from your browser.
 
 Open source (MIT): https://github.com/canmenzo/ThreatIntelSearch
 Also available for Firefox.
@@ -47,19 +52,30 @@ Also available for Firefox.
 
 **Single purpose**
 ```
-Provides a right-click context menu that opens threat intelligence lookups for text the user has selected.
+Looks up a user-selected IP address, domain, or file hash on threat intelligence services, via a right-click menu and a small results panel.
 ```
 
-**Permission justification — contextMenus**
+**Permission justification: contextMenus**
 ```
-Required to add the "IP Address", "Domain", and "Hash" entries to the browser's right-click menu. This is the extension's entire user interface; without it there is no way to trigger a lookup.
+Adds the "Threat Intel Search", "IP Address", "Domain", and "Hash" entries to the right-click menu. This is how every lookup starts; without it there is no way to trigger one.
 ```
 
-**Host permissions**: none requested.
+**Permission justification: storage**
+```
+Stores the user's optional API keys and settings, and caches lookup results for 30 minutes so repeat lookups don't use up the user's free API quota. Everything stays in local extension storage.
+```
+
+**Host permissions** (optional, not granted at install)
+```
+www.virustotal.com, api.abuseipdb.com, and otx.alienvault.com are optional host permissions. They are requested only when the user saves an API key for that vendor, and removed if the key is removed. They are used only to call that vendor's API for the indicator the user just looked up.
+```
 
 **Remote code**: No, I am not using remote code.
 
-**Data usage**: check nothing. The extension collects no user data.
+**Data usage**: check **Website content**. The only item is the text the user
+selected, which is sent to the vendor APIs the user configured, only when they
+open a lookup. It is never sent to the developer. (v1 sent nothing itself and
+checked nothing; v2's optional API calls are why this changes.)
 
 Then check all three certification boxes (no sale of data, no unrelated use, no
 creditworthiness use).
@@ -78,6 +94,7 @@ https://github.com/canmenzo/ThreatIntelSearch/blob/main/PRIVACY.md
 ## Assets
 
 - Icon: `chrome/icons/icon128.png` (128x128)
-- Screenshot: 1280x800 or 640x400 PNG, at least one required. Use a real capture
-  of the right-click menu open over a selected indicator — Google rejects mockups
-  and stock imagery.
+- Screenshot: 1280x800 or 640x400 PNG, at least one required. The current
+  `chrome/store/screenshot-1280x800.png` shows the v1 right-click menu; replace
+  it with a real capture of the v2 panel open next to a selected indicator.
+  Google rejects mockups and stock imagery.
