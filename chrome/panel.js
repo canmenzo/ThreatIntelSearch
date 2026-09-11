@@ -11,6 +11,7 @@ const $ = (id) => document.getElementById(id);
 
 let current = TYPES.includes(params.get("type")) ? params.get("type") : detected;
 let myWindowId = null;
+let run = 0;
 
 // One panel at a time: the background hands new lookups to this window instead of opening another.
 api.runtime.onMessage.addListener((msg, sender, sendResponse) => {
@@ -54,7 +55,7 @@ function setType(type) {
   }
   renderWarning();
   renderSources();
-  show(null, "");
+  score();
 }
 
 function renderWarning() {
@@ -92,13 +93,69 @@ function renderSources() {
   }
 }
 
-function show(result, text) {
+function show(result, text, settingsLink) {
   const s = result?.score;
   $("score").className = `score ${s == null ? "none" : s < 25 ? "clean" : s < 60 ? "sus" : "mal"}`;
   $("arc").style.strokeDashoffset = s == null ? CIRC : CIRC * (1 - Math.max(s, 2) / 100);
   $("pct").textContent = s == null ? "—" : `${s}%`;
   $("label").textContent = verdict(s) + (result?.sources === 1 ? " · 1 source" : "");
   $("breakdown").replaceChildren(text);
+  if (settingsLink) $("breakdown").append(document.createElement("br"), linkButton(settingsLink, () => api.runtime.openOptionsPage()));
+}
+
+function showLoading(text) {
+  $("score").className = "score loading";
+  $("arc").style.strokeDashoffset = CIRC * 0.75;
+  $("pct").textContent = "…";
+  $("label").textContent = "checking…";
+  $("breakdown").replaceChildren(text);
+}
+
+async function score() {
+  const my = ++run;
+  const type = current;
+  const { keys = {}, scoring = true, keyStatus = {} } = await api.storage.local.get(["keys", "scoring", "keyStatus"]);
+  if (my !== run) return;
+  if (!type || detected !== type) return show(null, "");
+  if (type === "ip" && isPrivateIp(ioc)) return show(null, "private address, nothing to look up");
+  if (!scoring) return show(null, "Scoring is turned off.", "Settings");
+  const ids = Object.keys(API_SOURCES).filter((id) => keys[id] && API_SOURCES[id].types.includes(type));
+  if (!ids.length) {
+    return Object.keys(keys).length
+      ? show(null, `None of your API keys cover ${{ ip: "IPs", domain: "domains", hash: "hashes" }[type]}.`, "Settings")
+      : show(null, "No API keys, links only.", "Add keys for a score");
+  }
+  showLoading(`asking ${ids.map((id) => API_SOURCES[id].short).join(", ")}`);
+  const results = await lookupAll(ids, type, keys, keyStatus);
+  if (my !== run) return;
+  show(combine(results), results.map((r) => r.text).join(" · "));
+}
+
+async function lookupAll(ids, type, keys, keyStatus) {
+  const now = Date.now();
+  const { cache = {} } = await api.storage.local.get("cache");
+  for (const k in cache) if (now - cache[k].at > CACHE_MS) delete cache[k];
+
+  const results = await Promise.all(ids.map(async (id) => {
+    const src = API_SOURCES[id];
+    const k = `${id}|${type}|${ioc}`;
+    if (cache[k]) return cache[k].r;
+    if (keyStatus[id] === "rejected") return { text: `${src.short} key rejected` };
+    if (!(await api.permissions.contains({ origins: [src.origin] }))) return { text: `${src.short} needs site access` };
+    try {
+      const r = await lookup(id, type, ioc, keys[id]);
+      cache[k] = { at: now, r };
+      keyStatus[id] = "ok";
+      return r;
+    } catch (e) {
+      if (!(e instanceof LookupError)) return { text: `${src.short} bad response` };
+      if (e.status !== "error") keyStatus[id] = e.status;
+      return { text: `${src.short} ${e.message}` };
+    }
+  }));
+
+  await api.storage.local.set({ cache, keyStatus });
+  return results;
 }
 
 $("ioc").textContent = ioc || "(nothing selected)";
@@ -108,6 +165,7 @@ if (raw && raw.trim().toLowerCase() !== ioc) {
 }
 document.title = ioc ? `${ioc} · Threat Intel Search` : "Threat Intel Search";
 
+$("settings").onclick = () => api.runtime.openOptionsPage();
 $("copy").onclick = async () => {
   await navigator.clipboard.writeText(ioc);
   $("copy").replaceChildren(icon("TickSquare"));

@@ -3,9 +3,18 @@
   "name": "Threat Intel Search",
   "version": "2.0.0",
   "description": "Right-click an IP, domain, or hash for a compact OSINT panel: one-click lookups, plus an optional score from your own API keys.",
-  "permissions": ["contextMenus"],
+  "permissions": ["contextMenus", "storage"],
+  "optional_host_permissions": [
+    "https://www.virustotal.com/*",
+    "https://api.abuseipdb.com/*",
+    "https://otx.alienvault.com/*"
+  ],
   "background": {
     "service_worker": "background.js"
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
   },
   "icons": {
     "16": "icons/icon16.png",
