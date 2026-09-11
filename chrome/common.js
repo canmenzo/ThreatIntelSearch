@@ -84,6 +84,107 @@ function buildUrl(target, ioc) {
   return target.url.replace(/%a/g, hashAlgo(ioc)).replace(/%s/g, encodeURIComponent(ioc));
 }
 
+// ---- Optional scoring (only runs when the user has saved API keys) ----
+
+const TIMEOUT_MS = 8000;
+const CACHE_MS = 30 * 60 * 1000;
+const SINGLE_SOURCE_CAP = 59; // one source alone can reach "suspicious", never "malicious"
+const OTX_ALLOWLIST = ["whitelist", "false_positive", "akamai", "alexa", "majestic"];
+
+class LookupError extends Error {
+  constructor(message, status) { super(message); this.status = status; }
+}
+
+async function getJson(url, headers) {
+  let res;
+  try {
+    res = await fetch(url, { headers, credentials: "omit", referrerPolicy: "no-referrer", cache: "no-store", signal: AbortSignal.timeout(TIMEOUT_MS) });
+  } catch (e) {
+    throw new LookupError(e.name === "TimeoutError" ? "timed out" : "unreachable", "error");
+  }
+  if (res.status === 401 || res.status === 403) throw new LookupError("key rejected", "rejected");
+  if (res.status === 429) throw new LookupError("rate limited", "limited");
+  if (res.status === 404) return null;
+  if (!res.ok) throw new LookupError(`HTTP ${res.status}`, "error");
+  return res.json();
+}
+
+const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+
+// read() returns { score 0-100, weight, text }, or just { text } when the source has nothing to say.
+const API_SOURCES = {
+  vt: {
+    name: "VirusTotal",
+    short: "VT",
+    types: ["ip", "domain", "hash"],
+    origin: "https://www.virustotal.com/*",
+    keyPage: "https://www.virustotal.com/gui/my-apikey",
+    headers: (key) => ({ "x-apikey": key }),
+    url: (type, ioc) => `https://www.virustotal.com/api/v3/${{ ip: "ip_addresses", domain: "domains", hash: "files" }[type]}/${encodeURIComponent(ioc)}`,
+    testUrl: "https://www.virustotal.com/api/v3/ip_addresses/8.8.8.8",
+    read(j) {
+      const s = j.data?.attributes?.last_analysis_stats;
+      const total = s ? s.malicious + s.suspicious + s.harmless + s.undetected : 0;
+      if (!total) return { text: "VT no analysis" };
+      return { score: (s.malicious / total) * 100, weight: 3, text: `VT ${s.malicious}/${total}` };
+    }
+  },
+  abuseipdb: {
+    name: "AbuseIPDB",
+    short: "AbuseIPDB",
+    types: ["ip"],
+    origin: "https://api.abuseipdb.com/*",
+    keyPage: "https://www.abuseipdb.com/api.html",
+    headers: (key) => ({ Key: key, Accept: "application/json" }),
+    url: (type, ioc) => `https://api.abuseipdb.com/api/v2/check?maxAgeInDays=90&ipAddress=${encodeURIComponent(ioc)}`,
+    testUrl: "https://api.abuseipdb.com/api/v2/check?ipAddress=8.8.8.8",
+    read(j) {
+      const d = j.data;
+      if (!d || !d.totalReports) return { text: "AbuseIPDB 0 reports" };
+      const n = d.totalReports;
+      return { score: d.abuseConfidenceScore, weight: n >= 5 ? 2 : 1, text: `AbuseIPDB ${d.abuseConfidenceScore} (${plural(n, "report")})` };
+    }
+  },
+  otx: {
+    name: "AlienVault OTX",
+    short: "OTX",
+    types: ["ip", "domain", "hash"],
+    origin: "https://otx.alienvault.com/*",
+    keyPage: "https://otx.alienvault.com/api",
+    headers: (key) => ({ "X-OTX-API-KEY": key }),
+    url: (type, ioc) => `https://otx.alienvault.com/api/v1/indicators/${type === "hash" ? "file" : type === "domain" ? "domain" : ioc.includes(":") ? "IPv6" : "IPv4"}/${encodeURIComponent(ioc)}/general`,
+    // Indicator lookups ignore bad keys, so validate against the account endpoint instead.
+    testUrl: "https://otx.alienvault.com/api/v1/users/me",
+    read(j) {
+      if ((j.validation || []).some((v) => OTX_ALLOWLIST.includes(v.source))) return { score: 0, weight: 1, text: "OTX allowlisted" };
+      const pulses = j.pulse_info?.count || 0;
+      if (!pulses) return { text: "OTX 0 pulses" };
+      const rel = j.pulse_info.related || {};
+      const families = [...new Set([...(rel.alienvault?.malware_families || []), ...(rel.other?.malware_families || [])]
+        .map((f) => (typeof f === "string" ? f : f.display_name)).filter(Boolean))];
+      const score = Math.min(80, 20 + pulses * 10) + (families.length ? 20 : 0);
+      return { score, weight: 1, text: `OTX ${plural(pulses, "pulse")}${families.length ? ` (${families.slice(0, 2).join(", ")})` : ""}` };
+    }
+  }
+};
+
+async function lookup(id, type, ioc, key) {
+  const src = API_SOURCES[id];
+  const j = await getJson(src.url(type, ioc), src.headers(key));
+  return j ? src.read(j) : { text: `${src.short} not found` };
+}
+
+const testKey = (id, key) => getJson(API_SOURCES[id].testUrl, API_SOURCES[id].headers(key));
+
+function combine(results) {
+  const scored = results.filter((r) => r.score != null);
+  if (!scored.length) return null;
+  const weight = scored.reduce((a, r) => a + r.weight, 0);
+  let score = Math.round(scored.reduce((a, r) => a + r.score * r.weight, 0) / weight);
+  if (scored.length === 1) score = Math.min(score, SINGLE_SOURCE_CAP);
+  return { score, sources: scored.length };
+}
+
 function verdict(score) {
   if (score == null) return "not enough data";
   return score < 25 ? "likely clean" : score < 60 ? "suspicious" : "malicious";

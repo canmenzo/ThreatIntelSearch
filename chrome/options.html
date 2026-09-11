@@ -1,0 +1,45 @@
+<!doctype html>
+<!-- Shared file: identical copies live at the repo root (Firefox, MV2) and in chrome/ (Chrome, MV3). Edit both. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Threat Intel Search · Settings</title>
+  <link rel="stylesheet" href="ui.css">
+</head>
+<body>
+  <main class="opts">
+    <header class="bar">
+      <span class="brand"><i data-icon="Search"></i>Threat Intel Search · Settings</span>
+    </header>
+
+    <p class="muted">
+      Everything here is optional. Without keys the panel still shows every lookup link.
+      With keys it also fills the score circle, using your own free vendor accounts.
+    </p>
+
+    <label class="check"><input type="checkbox" id="scoring"> Fetch a score when I open a lookup</label>
+
+    <div class="keys" id="keys"></div>
+
+    <div class="actions">
+      <button class="btn primary" id="save">Save and test keys</button>
+      <button class="btn" id="clear-cache">Clear cached scores</button>
+      <span class="muted" id="saved"></span>
+    </div>
+
+    <section class="card">
+      <h2><i data-icon="ShieldDone"></i> Where your data goes</h2>
+      <ul class="muted">
+        <li>Keys stay in this browser's extension storage. They are only ever sent to the vendor they belong to.</li>
+        <li>A score is fetched only when you open a lookup, straight from this extension to the vendor's API. No cookies are sent.</li>
+        <li>Results are cached locally for 30 minutes so repeat lookups don't burn your free quota.</li>
+        <li>Nothing is sent to the extension's author. There is no server, analytics, or telemetry.</li>
+        <li>The score is a convenience heuristic, not a verdict.</li>
+      </ul>
+    </section>
+  </main>
+  <script src="common.js"></script>
+  <script src="icons.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>
