@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Threat Intel Search",
-  "version": "1.1",
-  "description": "Right-click to search IPs, domains, and hashes across OSINT platforms.",
+  "version": "2.0.0",
+  "description": "Right-click an IP, domain, or hash for a compact OSINT panel: one-click lookups, plus an optional score from your own API keys.",
   "permissions": ["contextMenus"],
   "background": {
     "service_worker": "background.js"
