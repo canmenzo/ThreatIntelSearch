@@ -35,7 +35,9 @@ Sources:
 - Domain: VirusTotal, AlienVault OTX, AbuseIPDB, urlscan.io, SecurityTrails, Whois, crt.sh
 - Hash: VirusTotal, AlienVault OTX, MalwareBazaar, Hybrid Analysis
 
-Optional score: add your own free VirusTotal, AbuseIPDB, or AlienVault OTX API keys in settings and the circle fills in with a weighted score (likely clean / suspicious / malicious) and a breakdown of what each vendor said. One source alone is capped at "suspicious". It is a convenience heuristic, not a verdict. Without keys everything else works exactly the same.
+Optional score: add your own free VirusTotal, AbuseIPDB, or AlienVault OTX API keys in settings and the circle fills in (likely clean / suspicious / malicious) with a confidence level and one row per vendor showing what it found. Evidence from each vendor is combined so a strong detection isn't diluted by a vendor that has never seen the indicator, allowlisted and very popular domains count toward clean, and a single weak signal is capped at "suspicious". It is a convenience heuristic, not a verdict. Without keys everything else works exactly the same.
+
+Keyboard shortcuts: 1-9 open a source, C copies the indicator, D copies it defanged.
 
 Built for SOC analysts, incident responders, and threat hunters triaging alerts.
 
