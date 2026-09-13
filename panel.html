@@ -13,29 +13,39 @@
       <button class="icon-btn" id="settings" title="Settings and API keys"><i data-icon="Setting"></i></button>
     </header>
 
-    <section>
+    <section class="ioc-card">
       <div class="ioc-row">
         <code id="ioc"></code>
-        <button class="icon-btn" id="copy" title="Copy"><i data-icon="Document"></i></button>
+        <button class="icon-btn" id="copy" title="Copy (C)"><i data-icon="Document"></i></button>
+        <button class="icon-btn defang" id="defang" title="Copy defanged (D)">[.]</button>
       </div>
       <div class="raw" id="raw" hidden></div>
       <div class="types" id="types">
         <button data-type="ip">IP</button>
         <button data-type="domain">DOMAIN</button>
         <button data-type="hash">HASH</button>
+        <span class="toast" id="toast"></span>
         <span class="algo" id="algo"></span>
       </div>
-      <div class="warn" id="warn" hidden><i data-icon="Danger"></i><span id="warn-text"></span></div>
     </section>
 
+    <div class="warn" id="warn" hidden><i data-icon="Danger"></i><span id="warn-text"></span></div>
+
     <section class="score none" id="score">
-      <div class="gauge">
-        <svg viewBox="0 0 100 100"><circle class="track" cx="50" cy="50" r="42"/><circle class="arc" id="arc" cx="50" cy="50" r="42"/></svg>
-        <span id="pct">—</span>
+      <div class="score-head">
+        <div class="gauge">
+          <svg viewBox="0 0 100 100"><circle class="track" cx="50" cy="50" r="42"/><circle class="arc" id="arc" cx="50" cy="50" r="42"/></svg>
+          <span id="pct">—</span>
+        </div>
+        <div class="verdict">
+          <div class="label"><span id="verdict-icon"></span><span id="label">not enough data</span></div>
+          <div class="confidence" id="confidence"></div>
+        </div>
       </div>
-      <div class="verdict">
-        <div class="label" id="label">not enough data</div>
-        <div class="breakdown" id="breakdown"></div>
+      <div class="evidence" id="evidence"></div>
+      <div class="score-foot" id="score-foot" hidden>
+        <span id="cached"></span>
+        <button class="link" id="refresh">refresh</button>
       </div>
     </section>
 
@@ -50,7 +60,7 @@
       <button data-type="hash"><i data-icon="Send"></i>Open all · Hash</button>
     </section>
 
-    <footer class="foot"><i data-icon="InfoCircle"></i>not a verdict</footer>
+    <footer class="foot"><i data-icon="InfoCircle"></i>not a verdict · <button class="link" id="how">how scoring works</button></footer>
   </main>
   <script src="common.js"></script>
   <script src="icons.js"></script>

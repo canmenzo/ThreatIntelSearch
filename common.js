@@ -85,10 +85,19 @@ function buildUrl(target, ioc) {
 }
 
 // ---- Optional scoring (only runs when the user has saved API keys) ----
+//
+// Each vendor turns its answer into evidence measured in log-odds: positive pushes toward
+// malicious, negative toward clean, near zero means "doesn't say much". The pieces are added
+// to a prior and squashed into 0-100 (naive Bayes). Strong evidence from one vendor is not
+// averaged away by another vendor having never seen the indicator, and several weak signals
+// that agree add up.
 
 const TIMEOUT_MS = 8000;
 const CACHE_MS = 30 * 60 * 1000;
-const SINGLE_SOURCE_CAP = 59; // one source alone can reach "suspicious", never "malicious"
+const CACHE_VERSION = "2";
+const PRIOR = Math.log(0.15 / 0.85); // things analysts right-click are more often bad than random traffic
+const SINGLE_SOURCE_CAP = 59; // one vendor with only weak evidence can reach "suspicious", never "malicious"
+const STRONG = 2.5; // log-odds a single vendor needs before it may speak alone (e.g. 6+ VT engines on a domain)
 const OTX_ALLOWLIST = ["whitelist", "false_positive", "akamai", "alexa", "majestic"];
 
 class LookupError extends Error {
@@ -110,8 +119,10 @@ async function getJson(url, headers) {
 }
 
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+const clamp = (x, lo, hi) => Math.min(hi, Math.max(lo, x));
 
-// read() returns { score 0-100, weight, text }, or just { text } when the source has nothing to say.
+// read(json, type) returns { finding, llr, evidence }. evidence: false means the vendor had
+// nothing substantive (its small llr still counts once some other vendor has evidence).
 const API_SOURCES = {
   vt: {
     name: "VirusTotal",
@@ -122,11 +133,26 @@ const API_SOURCES = {
     headers: (key) => ({ "x-apikey": key }),
     url: (type, ioc) => `https://www.virustotal.com/api/v3/${{ ip: "ip_addresses", domain: "domains", hash: "files" }[type]}/${encodeURIComponent(ioc)}`,
     testUrl: "https://www.virustotal.com/api/v3/ip_addresses/8.8.8.8",
-    read(j) {
-      const s = j.data?.attributes?.last_analysis_stats;
+    read(j, type) {
+      const a = j.data?.attributes || {};
+      const s = a.last_analysis_stats;
       const total = s ? s.malicious + s.suspicious + s.harmless + s.undetected : 0;
-      if (!total) return { text: "VT no analysis" };
-      return { score: (s.malicious / total) * 100, weight: 3, text: `VT ${s.malicious}/${total}` };
+      if (!total) return { finding: "never analysed", llr: 0 };
+      // Engine counts, not ratios: most engines never rate infrastructure, so 5/94 on an IP is
+      // a real signal. Files get more skepticism for 1-2 hits (generic heuristics misfire).
+      const eff = s.malicious + s.suspicious / 2;
+      let llr = type === "hash"
+        ? (eff ? 1.6 * Math.log(eff) - 0.6 : -1.2)
+        : (eff ? 0.5 + 1.2 * Math.log(eff) : -0.6);
+      if (a.reputation) llr += clamp(-a.reputation / 50, -1, 1) * 0.8;
+      const rank = Math.min(...Object.values(a.popularity_ranks || {}).map((r) => r.rank));
+      if (rank <= 10000) llr -= 1.5;
+      else if (rank <= 100000) llr -= 0.8;
+      const label = a.popular_threat_classification?.suggested_threat_label;
+      const parts = [`${s.malicious}/${total} engines`];
+      if (label) parts.push(label);
+      else if (rank <= 100000) parts.push(`top ${rank <= 10000 ? "10k" : "100k"} site`);
+      return { finding: parts.join(" · "), llr: clamp(llr, -3, 5.5), evidence: true };
     }
   },
   abuseipdb: {
@@ -140,9 +166,12 @@ const API_SOURCES = {
     testUrl: "https://api.abuseipdb.com/api/v2/check?ipAddress=8.8.8.8",
     read(j) {
       const d = j.data;
-      if (!d || !d.totalReports) return { text: "AbuseIPDB 0 reports" };
-      const n = d.totalReports;
-      return { score: d.abuseConfidenceScore, weight: n >= 5 ? 2 : 1, text: `AbuseIPDB ${d.abuseConfidenceScore} (${plural(n, "report")})` };
+      if (!d) return { finding: "no data", llr: 0 };
+      if (d.isWhitelisted) return { finding: "allowlisted", llr: -2.5, evidence: true };
+      if (!d.totalReports) return { finding: "0 reports", llr: -0.3 };
+      let llr = -0.5 + 4.5 * (d.abuseConfidenceScore / 100);
+      if (llr > 0 && d.numDistinctUsers <= 1) llr /= 2; // one reporter can be a grudge or a misconfig
+      return { finding: `${d.abuseConfidenceScore}% · ${plural(d.totalReports, "report")}`, llr, evidence: true };
     }
   },
   otx: {
@@ -156,33 +185,53 @@ const API_SOURCES = {
     // Indicator lookups ignore bad keys, so validate against the account endpoint instead.
     testUrl: "https://otx.alienvault.com/api/v1/users/me",
     read(j) {
-      if ((j.validation || []).some((v) => OTX_ALLOWLIST.includes(v.source))) return { score: 0, weight: 1, text: "OTX allowlisted" };
+      if ((j.validation || []).some((v) => OTX_ALLOWLIST.includes(v.source))) return { finding: "allowlisted", llr: -2.5, evidence: true };
       const pulses = j.pulse_info?.count || 0;
-      if (!pulses) return { text: "OTX 0 pulses" };
+      if (!pulses) return { finding: "0 pulses", llr: -0.2 };
       const rel = j.pulse_info.related || {};
-      const families = [...new Set([...(rel.alienvault?.malware_families || []), ...(rel.other?.malware_families || [])]
-        .map((f) => (typeof f === "string" ? f : f.display_name)).filter(Boolean))];
-      const score = Math.min(80, 20 + pulses * 10) + (families.length ? 20 : 0);
-      return { score, weight: 1, text: `OTX ${plural(pulses, "pulse")}${families.length ? ` (${families.slice(0, 2).join(", ")})` : ""}` };
+      const names = (key) => [...(rel.alienvault?.[key] || []), ...(rel.other?.[key] || [])]
+        .map((f) => (typeof f === "string" ? f : f.display_name || f.name)).filter(Boolean);
+      const families = [...new Set(names("malware_families"))];
+      const adversaries = [...new Set(names("adversary"))];
+      // Pulses are community feeds of mixed quality, so OTX alone is capped below STRONG.
+      const llr = Math.min(2.2, 0.7 * Math.log(1 + pulses) + (families.length ? 0.8 : 0) + (adversaries.length ? 0.5 : 0));
+      const tags = [...adversaries, ...families].slice(0, 2);
+      return { finding: [plural(pulses, "pulse"), ...tags].join(" · "), llr, evidence: true };
     }
   }
 };
 
 async function lookup(id, type, ioc, key) {
-  const src = API_SOURCES[id];
-  const j = await getJson(src.url(type, ioc), src.headers(key));
-  return j ? src.read(j) : { text: `${src.short} not found` };
+  const j = await getJson(API_SOURCES[id].url(type, ioc), API_SOURCES[id].headers(key));
+  return j ? API_SOURCES[id].read(j, type) : { finding: "not found", llr: 0 };
 }
 
 const testKey = (id, key) => getJson(API_SOURCES[id].testUrl, API_SOURCES[id].headers(key));
 
+// results: [{ llr, evidence }]. Returns null when no vendor had evidence.
 function combine(results) {
-  const scored = results.filter((r) => r.score != null);
-  if (!scored.length) return null;
-  const weight = scored.reduce((a, r) => a + r.weight, 0);
-  let score = Math.round(scored.reduce((a, r) => a + r.score * r.weight, 0) / weight);
-  if (scored.length === 1) score = Math.min(score, SINGLE_SOURCE_CAP);
-  return { score, sources: scored.length };
+  const ev = results.filter((r) => r.evidence);
+  if (!ev.length) return null;
+  const sum = results.reduce((a, r) => a + (r.llr || 0), 0);
+  let score = Math.round(100 / (1 + Math.exp(-(PRIOR + sum))));
+  const strong = ev.some((r) => Math.abs(r.llr) >= STRONG);
+  const capped = ev.length === 1 && !strong && score > SINGLE_SOURCE_CAP;
+  if (capped) score = SINGLE_SOURCE_CAP;
+  const bad = ev.some((r) => r.llr >= 1);
+  const good = ev.some((r) => r.llr <= -1);
+  const confidence = bad && good ? "mixed"
+    : ev.length >= 2 && Math.abs(sum) >= 2 ? "high"
+    : strong || ev.length >= 2 ? "medium" : "low";
+  return { score, sources: ev.length, confidence, capped };
+}
+
+// Per-vendor tone for the evidence list.
+function tone(r) {
+  if (r.error) return "error";
+  if (r.llr >= 1.5) return "mal";
+  if (r.llr > 0.3) return "sus";
+  if (r.evidence && r.llr <= -0.5) return "clean";
+  return "none";
 }
 
 function verdict(score) {
