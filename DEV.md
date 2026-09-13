@@ -55,9 +55,10 @@ when menus are registered (`onInstalled`/`onStartup` vs top level).
    **Save and test keys**. Accept the site access prompt. The status should read
    **key rejected**. Look up an IP again: the breakdown says `VT key rejected`, the
    circle stays gray, links still work.
-6. With a real free key: the circle fills in and the breakdown reads like
-   `VT 0/94`. A second lookup of the same indicator within 30 minutes is served
-   from cache (no new request in the panel's Network tab).
+6. With a real free key: the circle fills in, a confidence line appears, and an
+   evidence row reads like `VirusTotal 0/94 engines`. A second lookup of the same
+   indicator within 30 minutes says "cached N min ago"; **refresh** re-queries.
+   Press `1` to open the first source, `D` to copy the indicator defanged.
 7. Untick **Fetch a score when I open a lookup**: no API requests at all.
 
 ## Package

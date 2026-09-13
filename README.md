@@ -29,21 +29,34 @@ A lightweight browser extension for SOC analysts: right-click a selected IP addr
 
 - ⚡ No data collection. No tracking. No nonsense.
 
-#### Optional score
+#### How the score works
 
-Add free API keys in the extension's settings (gear icon in the panel) and the circle fills in when you open a lookup:
+Add free API keys in the extension's settings (gear icon in the panel) and the circle fills in when you open a lookup. Under it, one row per vendor shows what that vendor said, with a colored dot for which way it pushed; click a row to open that vendor's page.
 
-| Source | Covers | What it contributes |
-|---|---|---|
-| VirusTotal | IP, domain, hash | `malicious / (malicious + suspicious + harmless + undetected)` from the last analysis |
-| AbuseIPDB | IP | abuse confidence score, weighted up when there are 5+ reports |
-| AlienVault OTX | IP, domain, hash | pulse count, bumped when pulses name malware families; 0 if OTX allowlists the indicator |
+Each vendor's answer becomes **evidence** (log-odds): positive pushes toward malicious, negative toward clean, near zero means it didn't say much. Evidence is added to a prior (things analysts right-click are more often bad than random traffic) and turned into 0-100. This is a naive Bayes model, so strong evidence from one vendor isn't averaged away by another vendor that has simply never seen the indicator, and weak signals that agree add up.
 
-The sources are combined as a weighted average and labeled **likely clean** (0-24), **suspicious** (25-59), or **malicious** (60-100). A single source on its own is capped at 59, so one signal can never read as "malicious 97%". No keys, no answer, or only errors means a gray circle and **not enough data**; the links keep working either way.
+| Source | Covers | Pushes toward malicious | Pushes toward clean |
+|---|---|---|---|
+| VirusTotal | IP, domain, hash | number of engines flagging it (suspicious counts half), on a log curve; files need more hits than IPs/domains because 1-2 generic file detections are usually false positives; bad community reputation | zero detections; good community reputation; domain in a top 10k / 100k popularity list |
+| AbuseIPDB | IP | abuse confidence score (halved when only one user reported it) | allowlisted by AbuseIPDB; reports with 0% confidence |
+| AlienVault OTX | IP, domain, hash | pulse count on a log curve, plus named malware families or adversaries; capped, since pulses are community feeds of mixed quality | allowlisted / known false positive |
 
-The score is a convenience heuristic, not a verdict. The breakdown under the circle (`VT 8/72 · AbuseIPDB 100 (57 reports) · OTX 3 pulses`) shows exactly what went into it.
+"Not found", "0 reports" and "0 pulses" are treated as absence of evidence, not proof of clean.
 
-Results are cached locally for 30 minutes so repeat lookups don't burn free API quotas. Rejected keys (401/403) are skipped and flagged in settings; rate limits (429) are shown in the panel.
+Labels: **likely clean** (0-24), **suspicious** (25-59), **malicious** (60-100). Under the label:
+
+- **Confidence**: high (2+ vendors with a clear combined signal), medium, low (a single vendor), or **sources disagree** when one vendor clearly says bad and another clearly says clean.
+- **Capped**: if only one vendor had evidence and it was weak (for example only OTX pulses, or 5 VT engines on a domain), the score is held at 59, so one weak signal can never read as "malicious". Strong single-vendor evidence, like 60/72 VT engines on a file, is not capped.
+
+No keys, no answer, or only errors means a gray circle and **not enough data**; the links keep working either way.
+
+The score is a convenience heuristic, not a verdict.
+
+Results are cached locally for 30 minutes so repeat lookups don't burn free API quotas (**refresh** bypasses the cache). Rejected keys (401/403) are skipped and flagged in settings; rate limits (429) are shown in the panel.
+
+#### Panel shortcuts
+
+`1`-`9` open that source, `C` copies the indicator, `D` copies it defanged (`evil[.]com`), `Esc` closes the panel.
 
 ---
 
