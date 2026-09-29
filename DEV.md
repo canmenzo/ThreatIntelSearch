@@ -44,8 +44,8 @@ when menus are registered (`onInstalled`/`onStartup` vs top level).
 
 1. Select `8.8.8.8` on any page, right-click, **Threat Intel Search > I (IP Address)**.
    A small panel window opens: IP badge, gray circle with a dash, "not enough data",
-   7 source buttons, **Open all · IP** highlighted, the other two dimmed.
-2. Click one source: one tab opens in the original window. Click **Open all · IP**: 7 tabs.
+   7 source buttons, and **Open all 7 IP sources**.
+2. Click one source: one tab opens in the original window. Click **Open all 7 IP sources**: 7 tabs.
 3. Select `hxxps://evil[.]com/login`, right-click, **I (IP Address)**: the panel
    reuses its window, shows `evil.com`, and warns it looks like a domain. Click
    **Switch to DOMAIN**.

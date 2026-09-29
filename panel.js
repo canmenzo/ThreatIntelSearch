@@ -10,12 +10,14 @@ const PLURAL = { ip: "IPs", domain: "domains", hash: "hashes" };
 const VERDICT_ICON = { clean: "ShieldDone", sus: "Danger", mal: "ShieldFail" };
 const CIRC = 2 * Math.PI * 42;
 const HOW_URL = "https://github.com/canmenzo/ThreatIntelSearch#how-the-score-works";
+const NAME = { ip: "IP", domain: "domain", hash: "hash" };
 const $ = (id) => document.getElementById(id);
 
 let current = TYPES.includes(params.get("type")) ? params.get("type") : detected;
 let myWindowId = null;
 let run = 0;
 let shownPct = 0;
+let countFrame = 0;
 
 // One panel at a time: the background hands new lookups to this window instead of opening another.
 api.runtime.onMessage.addListener((msg, sender, sendResponse) => {
@@ -58,11 +60,19 @@ async function openTabs(urls) {
 }
 
 let toastTimer;
-async function copy(text, message) {
-  await navigator.clipboard.writeText(text);
-  $("toast").textContent = message;
+async function copy(text, message, button) {
+  let ok = true;
+  try { await navigator.clipboard.writeText(text); } catch { ok = false; }
+  $("toast").textContent = ok ? message : "copy failed";
+  $("toast").classList.add("show");
+  if (ok) button.classList.add("done");
+  if (ok && button === $("copy")) button.replaceChildren(icon("TickSquare"));
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { $("toast").textContent = ""; }, 1400);
+  toastTimer = setTimeout(() => {
+    $("toast").classList.remove("show");
+    for (const b of [$("copy"), $("defang")]) b.classList.remove("done");
+    $("copy").replaceChildren(icon("Document"));
+  }, 1400);
 }
 
 const defanged = () => ioc.replace(/\./g, "[.]").replace(/:/g, "[:]");
@@ -72,11 +82,8 @@ function setType(type) {
   for (const b of $("types").querySelectorAll("button")) b.classList.toggle("active", b.dataset.type === type);
   $("algo").textContent = type === "hash" && detected === "hash" ? hashAlgo(ioc).toUpperCase() : "";
   $("defang").hidden = !ioc || type === "hash";
-  for (const b of $("openall").querySelectorAll("button")) {
-    b.disabled = !ioc || (type != null && b.dataset.type !== type);
-    b.classList.toggle("primary", b.dataset.type === type);
-    b.title = `Opens ${SEARCH_TARGETS[b.dataset.type].length} tabs`;
-  }
+  $("openall").hidden = !ioc || !type;
+  if (type) $("open-all-label").textContent = `Open all ${SEARCH_TARGETS[type].length} ${NAME[type]} sources`;
   renderWarning();
   renderSources();
   score();
@@ -119,19 +126,21 @@ function vendorUrl(id) {
 }
 
 function countUp(to) {
+  cancelAnimationFrame(countFrame);
   const from = shownPct;
   const start = performance.now();
   const step = (now) => {
-    const t = Math.min(1, (now - start) / 700);
+    const t = Math.min(1, (now - start) / 800);
     shownPct = Math.round(from + (to - from) * (1 - (1 - t) ** 3));
     $("pct").textContent = `${shownPct}%`;
-    if (t < 1) requestAnimationFrame(step);
+    if (t < 1) countFrame = requestAnimationFrame(step);
   };
-  requestAnimationFrame(step);
+  countFrame = requestAnimationFrame(step);
 }
 
-function evidenceRow(id, r) {
+function evidenceRow(id, r, i) {
   const row = el("button", "ev-row");
+  row.style.setProperty("--i", i);
   const url = vendorUrl(id);
   if (url) {
     row.title = `Open ${API_SOURCES[id].name}`;
@@ -151,6 +160,7 @@ function show(state, { note = "", action, rows = [], ids = [], checkedAt } = {})
   $("arc").style.strokeDashoffset = state === "loading" ? CIRC * 0.75 : s == null ? CIRC : CIRC * (1 - Math.max(s, 2) / 100);
 
   if (s == null) {
+    cancelAnimationFrame(countFrame);
     shownPct = 0;
     $("pct").textContent = state === "loading" ? "…" : "—";
   } else {
@@ -168,7 +178,7 @@ function show(state, { note = "", action, rows = [], ids = [], checkedAt } = {})
   }
   if (action) conf.append(el("br"), linkButton(action, () => api.runtime.openOptionsPage()));
 
-  $("evidence").replaceChildren(...(state === "loading" ? ids.map((id) => evidenceRow(id)) : rows.map((r) => evidenceRow(r.id, r))));
+  $("evidence").replaceChildren(...(state === "loading" ? ids.map((id, i) => evidenceRow(id, null, i)) : rows.map((r, i) => evidenceRow(r.id, r, i))));
   $("score-foot").hidden = !checkedAt;
   if (checkedAt) {
     const mins = Math.floor((Date.now() - checkedAt) / 60000);
@@ -234,18 +244,16 @@ document.title = ioc ? `${ioc} · Threat Intel Search` : "Threat Intel Search";
 $("settings").onclick = () => api.runtime.openOptionsPage();
 $("how").onclick = () => openTabs([HOW_URL]);
 $("refresh").onclick = () => score(true);
-$("copy").onclick = () => copy(ioc, "copied");
-$("defang").onclick = () => copy(defanged(), "copied defanged");
+$("copy").onclick = () => copy(ioc, "copied", $("copy"));
+$("defang").onclick = () => copy(defanged(), "copied defanged", $("defang"));
 for (const b of $("types").querySelectorAll("button")) b.onclick = () => setType(b.dataset.type);
-for (const b of $("openall").querySelectorAll("button")) {
-  b.onclick = () => openTabs(SEARCH_TARGETS[b.dataset.type].map((t) => buildUrl(t, ioc)));
-}
+$("open-all").onclick = () => openTabs(SEARCH_TARGETS[current].map((t) => buildUrl(t, ioc)));
 
 addEventListener("keydown", (e) => {
   if (e.ctrlKey || e.metaKey || e.altKey) return;
   if (e.key === "Escape") window.close();
-  else if (e.key === "c" && ioc) copy(ioc, "copied");
-  else if (e.key === "d" && ioc && current !== "hash") copy(defanged(), "copied defanged");
+  else if (e.key === "c" && ioc) copy(ioc, "copied", $("copy"));
+  else if (e.key === "d" && ioc && current !== "hash") copy(defanged(), "copied defanged", $("defang"));
   else if (/^[1-9]$/.test(e.key)) document.querySelectorAll(".src")[e.key - 1]?.click();
 });
 
