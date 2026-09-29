@@ -1,92 +1,94 @@
 # 🔎 Threat Intel Search
 
-A lightweight browser extension for SOC analysts: right-click a selected IP address, domain, or file hash and get a compact lookup panel with every OSINT source one click away, plus an optional score from your own API keys.
+Right-click an IP, domain, or file hash and get a compact lookup panel: every OSINT source one click away, plus an optional threat score from your own API keys. Built for SOC analysts.
 
 [![Firefox Add-ons](https://img.shields.io/amo/v/threat-intel-search?label=Firefox%20Add-ons&color=blue)](https://addons.mozilla.org/en-US/firefox/addon/threat-intel-search/)
 [![Chrome Web Store](https://img.shields.io/chrome-web-store/v/lmjmpdlnhndlndeiofcfimainondjbcg?label=Chrome%20Web%20Store&color=blue)](https://chromewebstore.google.com/detail/threat-intel-search/lmjmpdlnhndlndeiofcfimainondjbcg)
+[![Source version](https://img.shields.io/github/manifest-json/v/canmenzo/ThreatIntelSearch?label=source&color=blueviolet)](manifest.json)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+
+> ℹ️ **v2 is on `main` and not in the stores yet.** The store and release builds are still v1.1 (opens every source in new tabs). To try v2 now, load it unpacked, see [DEV.md](DEV.md).
+
+---
+
+### ✨ What's new in v2
+
+- 🪟 **Lookup panel** instead of a pile of tabs, with an auto-detect **Threat Intel Search** menu entry
+- 🧹 **Input cleanup**: strips quotes and URL schemes, reduces URLs to their host, refangs `evil[.]com` / `hxxp://`, and offers a one-click type switch if you picked wrong
+- 🌐 **More sources**: GreyNoise, Shodan InternetDB, urlscan.io, SecurityTrails, Whois, crt.sh, MalwareBazaar, Hybrid Analysis
+- 🎯 **Optional score** from your own VirusTotal / AbuseIPDB / AlienVault OTX keys, using an evidence-based (naive Bayes) model with a confidence line and per-vendor evidence rows
+- ⌨️ **Shortcuts**: `1`-`9` open a source, `C` copies, `D` copies defanged, `Esc` closes
 
 ---
 
 ### 🔥 Features
 
-- 🔍 Right-click menu with four entries:
-  - **Threat Intel Search**: auto-detects IP, domain, or hash
-  - **I (IP Address)**, **D (Domain)**, **H (Hash)**: force a type
-- 🧹 Cleans the selection first: trims, strips quotes and URL schemes, reduces a URL to its host, and refangs `evil[.]com` / `hxxp://`. If you pick the wrong type, the panel says what the indicator looks like and offers a one-click switch.
-- 🪟 A small dark panel instead of a pile of tabs:
-  - the indicator, copyable, with an IP / DOMAIN / HASH badge
-  - a score circle (gray until there's data)
-  - one button per source, each opening that single lookup
-  - **Open all · IP / Domain / Hash** to open every source for the type in one go
-- 🌐 Sources (links only, no account needed):
+- 🖱️ Right-click menu: **Threat Intel Search** (auto-detect) or force **I** (IP) / **D** (Domain) / **H** (Hash)
+- 📋 Panel shows the indicator with a type badge, a score circle, one numbered button per source, and **Open all** for the type
+- 🔗 Sources (links only, no account needed):
 
   | Type | Sources |
   |---|---|
-  | IP | VirusTotal, AlienVault OTX, AbuseIPDB, MaxMind, GreyNoise, Shodan InternetDB, urlscan.io |
-  | Domain | VirusTotal, AlienVault OTX, AbuseIPDB, urlscan.io, SecurityTrails, Whois, crt.sh |
-  | Hash (MD5, SHA1, SHA256) | VirusTotal, AlienVault OTX, MalwareBazaar, Hybrid Analysis |
+  | 🌍 IP | VirusTotal, AlienVault OTX, AbuseIPDB, MaxMind, GreyNoise, Shodan InternetDB, urlscan.io |
+  | 🏷️ Domain | VirusTotal, AlienVault OTX, AbuseIPDB, urlscan.io, SecurityTrails, Whois, crt.sh |
+  | 🧬 Hash (MD5, SHA1, SHA256) | VirusTotal, AlienVault OTX, MalwareBazaar, Hybrid Analysis |
 
-- ⚡ No data collection. No tracking. No nonsense.
+- 🚫 No data collection, no tracking, no servers
 
-#### How the score works
+---
 
-Add free API keys in the extension's settings (gear icon in the panel) and the circle fills in when you open a lookup. Under it, one row per vendor shows what that vendor said, with a colored dot for which way it pushed; click a row to open that vendor's page.
+### 🎯 The score (optional)
 
-Each vendor's answer becomes **evidence** (log-odds): positive pushes toward malicious, negative toward clean, near zero means it didn't say much. Evidence is added to a prior (things analysts right-click are more often bad than random traffic) and turned into 0-100. This is a naive Bayes model, so strong evidence from one vendor isn't averaged away by another vendor that has simply never seen the indicator, and weak signals that agree add up.
+Add free API keys in settings (gear icon in the panel). When you open a lookup, the circle fills in: **likely clean** (0-24), **suspicious** (25-59), or **malicious** (60-100), with a **confidence** line (high / medium / low / sources disagree). One row per vendor shows what it found; click a row to open that vendor's page.
 
-| Source | Covers | Pushes toward malicious | Pushes toward clean |
+<details>
+<summary>How scoring works</summary>
+
+Each vendor's answer becomes **evidence** (log-odds): positive pushes toward malicious, negative toward clean. Evidence is added to a prior (things analysts right-click are more often bad than random traffic) and mapped to 0-100. A strong detection from one vendor isn't averaged away by another that has simply never seen the indicator, and weak signals that agree add up.
+
+| Source | Covers | Toward malicious | Toward clean |
 |---|---|---|---|
-| VirusTotal | IP, domain, hash | number of engines flagging it (suspicious counts half), on a log curve; files need more hits than IPs/domains because 1-2 generic file detections are usually false positives; bad community reputation | zero detections; good community reputation; domain in a top 10k / 100k popularity list |
-| AbuseIPDB | IP | abuse confidence score (halved when only one user reported it) | allowlisted by AbuseIPDB; reports with 0% confidence |
-| AlienVault OTX | IP, domain, hash | pulse count on a log curve, plus named malware families or adversaries; capped, since pulses are community feeds of mixed quality | allowlisted / known false positive |
+| VirusTotal | IP, domain, hash | engines flagging it (suspicious counts half) on a log curve; files need more hits than IPs/domains; bad community reputation | zero detections; good reputation; domain in a top 10k / 100k list |
+| AbuseIPDB | IP | abuse confidence score (halved with a single reporter) | allowlisted; reports with 0% confidence |
+| AlienVault OTX | IP, domain, hash | pulse count on a log curve plus named malware families / adversaries, capped | allowlisted / known false positive |
 
-"Not found", "0 reports" and "0 pulses" are treated as absence of evidence, not proof of clean.
-
-Labels: **likely clean** (0-24), **suspicious** (25-59), **malicious** (60-100). Under the label:
-
-- **Confidence**: high (2+ vendors with a clear combined signal), medium, low (a single vendor), or **sources disagree** when one vendor clearly says bad and another clearly says clean.
-- **Capped**: if only one vendor had evidence and it was weak (for example only OTX pulses, or 5 VT engines on a domain), the score is held at 59, so one weak signal can never read as "malicious". Strong single-vendor evidence, like 60/72 VT engines on a file, is not capped.
-
-No keys, no answer, or only errors means a gray circle and **not enough data**; the links keep working either way.
+- "Not found", "0 reports" and "0 pulses" are absence of evidence, not proof of clean.
+- If only one vendor had evidence and it was weak, the score is **capped at 59**, so one weak signal never reads as "malicious". Strong single-vendor evidence (e.g. 60/72 VT engines on a file) isn't capped.
+- No keys or no answers means a gray circle and **not enough data**. The links work either way.
+- Results are cached locally for 30 minutes (**refresh** bypasses it). Rejected keys (401/403) are flagged in settings; rate limits (429) show in the panel.
 
 The score is a convenience heuristic, not a verdict.
 
-Results are cached locally for 30 minutes so repeat lookups don't burn free API quotas (**refresh** bypasses the cache). Rejected keys (401/403) are skipped and flagged in settings; rate limits (429) are shown in the panel.
-
-#### Panel shortcuts
-
-`1`-`9` open that source, `C` copies the indicator, `D` copies it defanged (`evil[.]com`), `Esc` closes the panel.
+</details>
 
 ---
 
 ### 📦 Installation
 
-#### Option 1: Official stores (recommended, auto-updates)
+**Official stores** (recommended, auto-updates):
 
 | Browser | Store |
 |---|---|
-| Firefox, LibreWolf | [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/threat-intel-search/) |
-| Chrome, Edge, Brave, Opera | [Chrome Web Store](https://chromewebstore.google.com/detail/threat-intel-search/lmjmpdlnhndlndeiofcfimainondjbcg) |
+| 🦊 Firefox, LibreWolf | [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/threat-intel-search/) |
+| 🌐 Chrome, Edge, Brave, Opera | [Chrome Web Store](https://chromewebstore.google.com/detail/threat-intel-search/lmjmpdlnhndlndeiofcfimainondjbcg) |
 
-#### Option 2: Manual install (no auto-updates)
+**Manual** (no auto-updates): grab the build from the [latest release](https://github.com/canmenzo/ThreatIntelSearch/releases/latest).
 
-Grab the file for your browser from the [latest release](https://github.com/canmenzo/ThreatIntelSearch/releases/latest):
+- **Firefox**: drag the `.xpi` into `about:addons`.
+- **Chromium**: unzip the `-chrome` `.zip`, open `chrome://extensions`, enable **Developer mode**, **Load unpacked**.
 
-- **Firefox**: download the `.xpi` and drag it into `about:addons`.
-- **Chrome / Edge / Brave / Opera**: download and unzip the `-chrome` `.zip`, then open `chrome://extensions`, enable **Developer mode**, and click **Load unpacked** on the unzipped folder.
-
-You can also load straight from a clone: the Firefox build is the repo root (Manifest V2), the Chrome build is `chrome/` (Manifest V3). See [DEV.md](DEV.md).
+**From source**: the repo root is the Firefox build (MV2), `chrome/` is the Chrome build (MV3). See [DEV.md](DEV.md).
 
 ---
 
 ### 🛡️ Privacy
 
-Nothing is collected by the extension or its author. There are no servers, analytics, or telemetry. Link buttons open the vendor's site exactly as if you typed the indicator there yourself. If you add API keys, the indicator and your key go straight from your browser to that vendor's API, only for the vendors you configured and only when you open a lookup. Keys and cached results stay in local extension storage. Full policy: [PRIVACY.md](PRIVACY.md).
+Nothing is collected by the extension or its author. Link buttons open the vendor's site as if you typed the indicator yourself. If you add API keys, the indicator and key go straight from your browser to that vendor, only for vendors you configured and only when you open a lookup. Keys and cached results stay in local extension storage. Full policy: [PRIVACY.md](PRIVACY.md).
 
 ---
 
-### 📄 License & Author
+### 📄 License & credits
+
 - MIT. Do whatever you want, just don't be evil.
 - UI icons: [Iconly](https://iconly.pro/) (Light set) by Piqo Design, via [react-iconly](https://github.com/jrgarciadev/react-iconly) (MIT).
-- Created by someone who got tired of clicking through 5 tabs just to check an IP. Contributions welcome.
+- Made by someone who got tired of clicking through 5 tabs to check an IP. Contributions welcome.
