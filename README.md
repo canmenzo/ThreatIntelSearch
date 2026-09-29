@@ -25,6 +25,7 @@ Right-click an IP, domain, or file hash and get a compact lookup panel: every OS
 
 - 🖱️ Right-click menu: **Threat Intel Search** (auto-detect) or force **I** (IP) / **D** (Domain) / **H** (Hash)
 - 📋 Panel shows the indicator with a type badge, a score circle, one numbered button per source, and **Open all** for the type
+- 🛑 Flags private, reserved, and documentation IPs so you don't waste lookups on them
 - 🔗 Sources (links only, no account needed):
 
   | Type | Sources |
@@ -41,8 +42,7 @@ Right-click an IP, domain, or file hash and get a compact lookup panel: every OS
 
 Add free API keys in settings (gear icon in the panel). When you open a lookup, the circle fills in: **likely clean** (0-24), **suspicious** (25-59), or **malicious** (60-100), with a **confidence** line (high / medium / low / sources disagree). One row per vendor shows what it found; click a row to open that vendor's page.
 
-<details>
-<summary>How scoring works</summary>
+#### How the score works
 
 Each vendor's answer becomes **evidence** (log-odds): positive pushes toward malicious, negative toward clean. Evidence is added to a prior (things analysts right-click are more often bad than random traffic) and mapped to 0-100. A strong detection from one vendor isn't averaged away by another that has simply never seen the indicator, and weak signals that agree add up.
 
@@ -58,8 +58,6 @@ Each vendor's answer becomes **evidence** (log-odds): positive pushes toward mal
 - Results are cached locally for 30 minutes (**refresh** bypasses it). Rejected keys (401/403) are flagged in settings; rate limits (429) show in the panel.
 
 The score is a convenience heuristic, not a verdict.
-
-</details>
 
 ---
 

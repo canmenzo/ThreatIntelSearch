@@ -36,7 +36,8 @@ const SEARCH_TARGETS = {
 const IPV4 = /^(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)$/;
 const HASH = /^(?:[a-f0-9]{32}|[a-f0-9]{40}|[a-f0-9]{64})$/i;
 const DOMAIN = /^(?=.{4,253}$)(?:(?!-)[a-z0-9_-]{1,63}(?<!-)\.)+(?:[a-z]{2,63}|xn--[a-z0-9-]{1,59})$/i;
-const PRIVATE_IP = /^(?:10\.|127\.|0\.|169\.254\.|192\.168\.|172\.(?:1[6-9]|2\d|3[01])\.|100\.(?:6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.|::1$|f[cd][0-9a-f]{2}:|fe[89ab][0-9a-f]:)/i;
+// Private, loopback, link-local, CGNAT, documentation (TEST-NET), benchmarking, multicast/reserved.
+const PRIVATE_IP = /^(?:10\.|127\.|0\.|169\.254\.|192\.168\.|172\.(?:1[6-9]|2\d|3[01])\.|100\.(?:6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.|192\.0\.[02]\.|198\.51\.100\.|203\.0\.113\.|198\.1[89]\.|2(?:2[4-9]|[3-5]\d)\.|::1?$|f[cd][0-9a-f]{2}:|fe[89ab][0-9a-f]:|ff[0-9a-f]{2}:|2001:db8:)/i;
 
 function isIPv6(s) {
   if (!s.includes(":") || !/^[0-9a-f:.]+$/i.test(s)) return false;
@@ -94,7 +95,7 @@ function buildUrl(target, ioc) {
 
 const TIMEOUT_MS = 8000;
 const CACHE_MS = 30 * 60 * 1000;
-const CACHE_VERSION = "2";
+const CACHE_VERSION = "3";
 const PRIOR = Math.log(0.15 / 0.85); // things analysts right-click are more often bad than random traffic
 const SINGLE_SOURCE_CAP = 59; // one vendor with only weak evidence can reach "suspicious", never "malicious"
 const STRONG = 2.5; // log-odds a single vendor needs before it may speak alone (e.g. 6+ VT engines on a domain)
@@ -121,6 +122,10 @@ async function getJson(url, headers) {
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
 const clamp = (x, lo, hi) => Math.min(hi, Math.max(lo, x));
 
+// Log curve for engine counts: a*ln(n) + b from one hit up, straight line from `zero` below that,
+// so half a hit (one "suspicious") lands between zero hits and one hit instead of below zero.
+const logCurve = (n, zero, a, b) => (n >= 1 ? a * Math.log(n) + b : zero + n * (b - zero));
+
 // read(json, type) returns { finding, llr, evidence }. evidence: false means the vendor had
 // nothing substantive (its small llr still counts once some other vendor has evidence).
 const API_SOURCES = {
@@ -141,9 +146,7 @@ const API_SOURCES = {
       // Engine counts, not ratios: most engines never rate infrastructure, so 5/94 on an IP is
       // a real signal. Files get more skepticism for 1-2 hits (generic heuristics misfire).
       const eff = s.malicious + s.suspicious / 2;
-      let llr = type === "hash"
-        ? (eff ? 1.6 * Math.log(eff) - 0.6 : -1.2)
-        : (eff ? 0.5 + 1.2 * Math.log(eff) : -0.6);
+      let llr = type === "hash" ? logCurve(eff, -1.2, 1.6, -0.6) : logCurve(eff, -0.6, 1.2, 0.5);
       if (a.reputation) llr += clamp(-a.reputation / 50, -1, 1) * 0.8;
       const rank = Math.min(...Object.values(a.popularity_ranks || {}).map((r) => r.rank));
       if (rank <= 10000) llr -= 1.5;
