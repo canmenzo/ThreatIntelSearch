@@ -7,14 +7,12 @@ Right-click an IP, domain, or file hash and get a compact lookup panel: every OS
 [![Source version](https://img.shields.io/github/manifest-json/v/canmenzo/ThreatIntelSearch?label=source&color=blueviolet)](manifest.json)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-> ℹ️ **v2 is on `main` and not in the stores yet.** The store and release builds are still v1.1 (opens every source in new tabs). To try v2 now, load it unpacked, see [DEV.md](DEV.md).
-
 ---
 
 ### ✨ What's new in v2
 
 - 🪟 **Lookup panel** instead of a pile of tabs, with an auto-detect **Threat Intel Search** menu entry
-- 🧹 **Input cleanup**: strips quotes and URL schemes, reduces URLs to their host, refangs `evil[.]com` / `hxxp://`, and offers a one-click type switch if you picked wrong
+- 🧹 **Input cleanup**: strips quotes and URL schemes, reduces URLs to their host, defangs `evil[.]com` / `hxxp://`, and offers a one-click type switch if you picked wrong
 - 🌐 **More sources**: GreyNoise, Shodan InternetDB, urlscan.io, SecurityTrails, Whois, crt.sh, MalwareBazaar, Hybrid Analysis
 - 🎯 **Optional score** from your own VirusTotal / AbuseIPDB / AlienVault OTX keys, using an evidence-based (naive Bayes) model with a confidence line and per-vendor evidence rows
 - ⌨️ **Shortcuts**: `1`-`9` open a source, `C` copies, `D` copies defanged, `Esc` closes
