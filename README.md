@@ -11,7 +11,7 @@ Right-click an IP, domain, or file hash and get a compact lookup panel: every OS
 
 ### ✨ What's new in v2
 
-- 🪟 **Lookup panel** instead of a pile of tabs, with an auto-detect **Threat Intel Search** menu entry
+- 🪟 **Lookup panel** from the new **Analyze** menu entry, which auto-detects the type
 - 🧹 **Input cleanup**: strips quotes and URL schemes, reduces URLs to their host, defangs `evil[.]com` / `hxxp://`, and offers a one-click type switch if you picked wrong
 - 🌐 **More sources**: GreyNoise, Shodan InternetDB, urlscan.io, SecurityTrails, Whois, crt.sh, MalwareBazaar, Hybrid Analysis
 - 🎯 **Optional score** from your own VirusTotal / AbuseIPDB / AlienVault OTX keys, using an evidence-based (naive Bayes) model with a confidence line and per-vendor evidence rows
@@ -21,7 +21,7 @@ Right-click an IP, domain, or file hash and get a compact lookup panel: every OS
 
 ### 🔥 Features
 
-- 🖱️ Right-click menu: **Threat Intel Search** (auto-detect) or force **I** (IP) / **D** (Domain) / **H** (Hash)
+- 🖱️ Right-click menu: **Analyze** opens the panel (auto-detect); **I** (IP) / **D** (Domain) / **H** (Hash) skip the panel and open the classic sources in new tabs, like v1 (IP: VirusTotal, AlienVault OTX, AbuseIPDB, MaxMind; Domain: VirusTotal, AlienVault OTX, AbuseIPDB; Hash: VirusTotal)
 - 📋 Panel shows the indicator with a type badge, a score circle, one numbered button per source, and **Open all** for the type
 - 🛑 Flags private, reserved, and documentation IPs so you don't waste lookups on them
 - 🔗 Sources (links only, no account needed):
@@ -46,12 +46,14 @@ Each vendor's answer becomes **evidence** (log-odds): positive pushes toward mal
 
 | Source | Covers | Toward malicious | Toward clean |
 |---|---|---|---|
-| VirusTotal | IP, domain, hash | engines flagging it (suspicious counts half) on a log curve; files need more hits than IPs/domains; bad community reputation | zero detections; good reputation; domain in a top 10k / 100k list |
-| AbuseIPDB | IP | abuse confidence score (halved with a single reporter) | allowlisted; reports with 0% confidence |
-| AlienVault OTX | IP, domain, hash | pulse count on a log curve plus named malware families / adversaries, capped | allowlisted / known false positive |
+| VirusTotal | IP, domain, hash | engines flagging it (suspicious counts half) on a log curve; files need more hits than IPs/domains; bad community reputation; domain registered in the last 30 days | zero detections; good reputation; domain in a top 10k / 100k list |
+| AbuseIPDB | IP | abuse confidence score over the last 90 days (halved with a single reporter) | allowlisted |
+| AlienVault OTX | IP, domain, hash | pulse count on a log curve plus named malware families / adversaries, capped | allowlisted / known false positive for this exact domain or IP |
 
 - "Not found", "0 reports" and "0 pulses" are absence of evidence, not proof of clean.
+- Infrastructure goes stale and gets shared, so for IPs and domains: a VT scan or newest OTX pulse over a year old counts half; OTX pulses on a CDN address count for nothing; and an IP or domain tied to more than 10 unrelated malware families in OTX (cloud front doors, code hosting) counts a third. OTX allowlists inherited from a parent domain (`evil.duckdns.org` from `duckdns.org`) are ignored.
 - If only one vendor had evidence and it was weak, the score is **capped at 59**, so one weak signal never reads as "malicious". Strong single-vendor evidence (e.g. 60/72 VT engines on a file) isn't capped.
+- **High** confidence needs at least two vendors leaning the same way; **sources disagree** means one points to malicious and another to clean.
 - No keys or no answers means a gray circle and **not enough data**. The links work either way.
 - Results are cached locally for 30 minutes (**refresh** bypasses it). Rejected keys (401/403) are flagged in settings; rate limits (429) show in the panel.
 

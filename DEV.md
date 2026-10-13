@@ -42,24 +42,27 @@ when menus are registered (`onInstalled`/`onStartup` vs top level).
 
 ## Manual test
 
-1. Select `8.8.8.8` on any page, right-click, **Threat Intel Search > I (IP Address)**.
+1. Select `8.8.8.8` on any page, right-click, **Threat Intel Search > Analyze**.
    A small panel window opens: IP badge, gray circle with a dash, "not enough data",
    7 source buttons, and **Open all 7 IP sources**.
 2. Click one source: one tab opens in the original window. Click **Open all 7 IP sources**: 7 tabs.
-3. Select `hxxps://evil[.]com/login`, right-click, **I (IP Address)**: the panel
-   reuses its window, shows `evil.com`, and warns it looks like a domain. Click
-   **Switch to DOMAIN**.
-4. Select a SHA256 or MD5, use the top **Threat Intel Search** entry: HASH is
-   auto-selected and the algorithm shows next to the badge.
-5. Gear icon > settings. Paste a dummy key (e.g. `test`) into VirusTotal and click
+3. Select `hxxps://evil[.]com/login`, right-click, **Analyze**: the panel reuses its
+   window and shows `evil.com` as DOMAIN.
+4. Select a SHA256 or MD5, **Analyze**: HASH is auto-selected and the algorithm shows
+   next to the badge.
+5. No panel for the forced types. Select `8.8.8.8`, **I (IP Address)**: 4 tabs
+   (VirusTotal, OTX, AbuseIPDB, MaxMind) open right after the current tab, in order.
+   `hxxps://evil[.]com/login` with **D (Domain)**: 3 tabs for `evil.com`. A hash with
+   **H (Hash)**: 1 VirusTotal tab.
+6. Gear icon > settings. Paste a dummy key (e.g. `test`) into VirusTotal and click
    **Save and test keys**. Accept the site access prompt. The status should read
    **key rejected**. Look up an IP again: the breakdown says `VT key rejected`, the
    circle stays gray, links still work.
-6. With a real free key: the circle fills in, a confidence line appears, and an
+7. With a real free key: the circle fills in, a confidence line appears, and an
    evidence row reads like `VirusTotal 0/94 engines`. A second lookup of the same
    indicator within 30 minutes says "cached N min ago"; **refresh** re-queries.
    Press `1` to open the first source, `D` to copy the indicator defanged.
-7. Untick **Fetch a score when I open a lookup**: no API requests at all.
+8. Untick **Fetch a score when I open a lookup**: no API requests at all.
 
 ## Package
 

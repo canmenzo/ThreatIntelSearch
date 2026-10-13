@@ -1,6 +1,6 @@
 # Privacy Policy: Threat Intel Search
 
-Last updated: 2026-09-10
+Last updated: 2026-10-13
 
 Threat Intel Search does **not** collect, store on any server, transmit to its
 author, or sell any user data. It has no servers, no analytics, and no telemetry.
@@ -24,11 +24,11 @@ Stored in the browser's local extension storage, never sent to the author:
 
 ## What leaves your browser, and only when you ask
 
-- **Link buttons** open the third-party site you clicked (VirusTotal, AlienVault
-  OTX, AbuseIPDB, MaxMind, GreyNoise, Shodan InternetDB, urlscan.io,
-  SecurityTrails, Whois.com, crt.sh, MalwareBazaar, or Hybrid Analysis) in a new
-  tab with the indicator in the URL, exactly as if you had typed it into that
-  site yourself.
+- **Link buttons**, and the **I / D / H** right-click entries, open the third-party
+  sites for that lookup (VirusTotal, AlienVault OTX, AbuseIPDB, MaxMind, GreyNoise,
+  Shodan InternetDB, urlscan.io, SecurityTrails, Whois.com, crt.sh, MalwareBazaar,
+  or Hybrid Analysis) in new tabs with the indicator in the URL, exactly as if you
+  had typed it into that site yourself.
 - **Scores**, only if you have added API keys: when you open a lookup, the
   indicator and the matching key are sent directly from your browser to the API
   of each vendor you configured (VirusTotal, AbuseIPDB, AlienVault OTX). Nothing
@@ -41,8 +41,6 @@ Each vendor's handling of those requests is governed by its own privacy policy.
 
 - `contextMenus`: adds the right-click entries.
 - `storage`: keeps the settings, keys, and short-lived cache described above.
-- `tabs` (Firefox build only, unchanged from earlier versions): opens lookups in
-  new tabs.
 - Optional access to `www.virustotal.com`, `api.abuseipdb.com`, and
   `otx.alienvault.com`: requested only when you save a key for that vendor, and
   released again if you remove the key. Used only to call those vendors' APIs.

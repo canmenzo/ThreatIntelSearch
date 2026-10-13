@@ -4,12 +4,26 @@
 importScripts("common.js");
 
 const MENU = [
-  { id: "auto", title: "🔎 Threat Intel Search" },
+  { id: "analyze", title: "🔎 Analyze" },
   { id: "sep", type: "separator" },
   { id: "ip", title: "🔎 I (IP Address)" },
   { id: "domain", title: "🔎 D (Domain)" },
   { id: "hash", title: "🔎 H (Hash)" }
 ];
+const SOURCES = {
+  ip: [
+    "https://www.virustotal.com/gui/ip-address/%s/detection/",
+    "https://otx.alienvault.com/indicator/ip/%s",
+    "https://www.abuseipdb.com/check/%s",
+    "https://www.maxmind.com/en/geoip-web-services-demo?ip_address=%s"
+  ],
+  domain: [
+    "https://www.virustotal.com/gui/domain/%s/detection",
+    "https://otx.alienvault.com/indicator/domain/%s",
+    "https://www.abuseipdb.com/check/%s"
+  ],
+  hash: ["https://www.virustotal.com/gui/file/%s/detection"]
+};
 const PANEL_WIDTH = 380;
 const PANEL_HEIGHT = 640;
 
@@ -36,10 +50,18 @@ async function openPanel(query, windowId) {
 }
 
 api.contextMenus.onClicked.addListener((info, tab) => {
-  const type = TYPES.includes(info.menuItemId) ? info.menuItemId : "";
   const raw = (info.selectionText || "").trim();
-  const query = new URLSearchParams({ ioc: normalize(raw, type), type, raw: raw.slice(0, 300), win: tab?.windowId ?? "" });
-  openPanel(query.toString(), tab?.windowId);
+  if (info.menuItemId === "analyze") {
+    const query = new URLSearchParams({ ioc: normalize(raw, ""), type: "", raw: raw.slice(0, 300), win: tab?.windowId ?? "" });
+    openPanel(query.toString(), tab?.windowId);
+    return;
+  }
+  const sources = SOURCES[info.menuItemId];
+  const ioc = sources && normalize(raw, info.menuItemId);
+  if (!ioc) return;
+  sources.forEach((url, i) => {
+    api.tabs.create({ url: url.replace("%s", encodeURIComponent(ioc)), ...(tab && { windowId: tab.windowId, index: tab.index + 1 + i }) });
+  });
 });
 
 api.runtime.onInstalled.addListener(createMenus);

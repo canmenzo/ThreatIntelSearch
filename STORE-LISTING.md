@@ -22,13 +22,13 @@ Right-click an IP, domain, or hash for a compact OSINT panel: one-click lookups,
 ```
 Threat Intel Search is for analysts who are tired of opening five tabs to check one indicator.
 
-Select an IP address, domain, or file hash on any page, right-click, and pick "Threat Intel Search" (auto-detects the type) or force I (IP Address), D (Domain), or H (Hash). The selection is cleaned up first: quotes and URL schemes are stripped, URLs are reduced to their host, and defanged indicators like evil[.]com or hxxp:// are refanged.
+Select an IP address, domain, or file hash on any page, right-click, and pick "Analyze" (auto-detects the type) for the lookup panel, or I (IP Address), D (Domain), or H (Hash) to open the classic sources straight in new tabs (IP: VirusTotal, AlienVault OTX, AbuseIPDB, MaxMind; Domain: VirusTotal, AlienVault OTX, AbuseIPDB; Hash: VirusTotal). The selection is cleaned up first: quotes and URL schemes are stripped, URLs are reduced to their host, and defanged indicators like evil[.]com or hxxp:// are refanged.
 
-A small panel opens with:
+Analyze opens a small panel with:
 - the indicator, copyable, with its type
 - a score circle
 - one button per source, each opening that single lookup
-- "Open all" buttons that open every source for the type at once
+- an "Open all" button that opens every source for the type at once
 
 Sources:
 - IP: VirusTotal, AlienVault OTX, AbuseIPDB, MaxMind, GreyNoise, Shodan InternetDB, urlscan.io
@@ -59,7 +59,7 @@ Looks up a user-selected IP address, domain, or file hash on threat intelligence
 
 **Permission justification: contextMenus**
 ```
-Adds the "Threat Intel Search", "IP Address", "Domain", and "Hash" entries to the right-click menu. This is how every lookup starts; without it there is no way to trigger one.
+Adds the "Analyze", "IP Address", "Domain", and "Hash" entries to the right-click menu. This is how every lookup starts; without it there is no way to trigger one.
 ```
 
 **Permission justification: storage**
