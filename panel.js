@@ -137,7 +137,7 @@ function countUp(to) {
   const from = shownPct;
   const start = performance.now();
   const step = (now) => {
-    const t = Math.min(1, (now - start) / 400);
+    const t = Math.min(1, Math.max(0, now - start) / 400);
     shownPct = Math.round(from + (to - from) * (1 - (1 - t) ** 3));
     $("pct").textContent = `${shownPct}%`;
     if (t < 1) countFrame = requestAnimationFrame(step);
