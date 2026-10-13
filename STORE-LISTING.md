@@ -96,7 +96,5 @@ https://github.com/canmenzo/ThreatIntelSearch/blob/main/PRIVACY.md
 ## Assets
 
 - Icon: `chrome/icons/icon128.png` (128x128)
-- Screenshots (1280x800, also usable on AMO), upload in this order:
-  1. `chrome/store/screenshot-1280x800.png`: the right-click menu with Analyze and I / D / H.
-  2. `chrome/store/screenshot-2-1280x800.png`: the Analyze panel with a score.
-  Both render the real extension UI (sample vendor data) over a sample alert page.
+- Screenshot: `chrome/store/screenshot-1280x800.png` (1280x800, also usable on AMO):
+  the real right-click menu with Analyze and I / D / H, plus a short feature summary.
