@@ -96,7 +96,7 @@ https://github.com/canmenzo/ThreatIntelSearch/blob/main/PRIVACY.md
 ## Assets
 
 - Icon: `chrome/icons/icon128.png` (128x128)
-- Screenshot: 1280x800 or 640x400 PNG, at least one required. The current
-  `chrome/store/screenshot-1280x800.png` shows the v1 right-click menu; replace
-  it with a real capture of the v2 panel open next to a selected indicator.
-  Google rejects mockups and stock imagery.
+- Screenshots (1280x800, also usable on AMO), upload in this order:
+  1. `chrome/store/screenshot-1280x800.png`: the right-click menu with Analyze and I / D / H.
+  2. `chrome/store/screenshot-2-1280x800.png`: the Analyze panel with a score.
+  Both render the real extension UI (sample vendor data) over a sample alert page.
