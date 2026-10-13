@@ -68,7 +68,7 @@ function keyCard(id, src) {
 
 async function save(keys, granted) {
   const unused = Object.keys(API_SOURCES).filter((id) => !keys[id]).map((id) => API_SOURCES[id].origin);
-  if (unused.length) await api.permissions.remove({ origins: unused });
+  if (unused.length) await api.permissions.remove({ origins: unused, ...(unused.length === Object.keys(API_SOURCES).length && DATA_COLLECTION) });
   await api.storage.local.set({ keys, keyStatus: {} });
   $("saved").textContent = "Saved.";
 
@@ -96,7 +96,7 @@ $("save").onclick = () => {
   }
   const origins = Object.keys(keys).map((id) => API_SOURCES[id].origin);
   // Firefox only honours permissions.request() when it is called directly from the click.
-  const granted = origins.length ? api.permissions.request({ origins }) : Promise.resolve(true);
+  const granted = origins.length ? api.permissions.request({ origins, ...DATA_COLLECTION }) : Promise.resolve(true);
   granted.then((ok) => save(keys, ok), () => save(keys, false));
 };
 

@@ -232,7 +232,7 @@ async function lookupAll(ids, type, keys, keyStatus, fresh) {
     const k = `${CACHE_VERSION}|${id}|${type}|${ioc}`;
     if (cache[k] && !fresh) return { id, at: cache[k].at, ...cache[k].r };
     if (keyStatus[id] === "rejected") return { id, finding: "key rejected", error: true };
-    if (!(await api.permissions.contains({ origins: [API_SOURCES[id].origin] }))) return { id, finding: "needs site access", error: true };
+    if (!(await api.permissions.contains({ origins: [API_SOURCES[id].origin], ...DATA_COLLECTION }))) return { id, finding: "needs site access", error: true };
     try {
       const r = await lookup(id, type, ioc, keys[id]);
       cache[k] = { at: now, r };
