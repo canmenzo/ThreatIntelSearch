@@ -44,6 +44,10 @@ Each vendor's handling of those requests is governed by its own privacy policy.
 - Optional access to `www.virustotal.com`, `api.abuseipdb.com`, and
   `otx.alienvault.com`: requested only when you save a key for that vendor, and
   released again if you remove the key. Used only to call those vendors' APIs.
+- Firefox only: the optional "website content" data permission, requested in the
+  same prompt as the vendor access above, because the text you select is sent to
+  those vendors. Firefox lists the extension as collecting no data until you
+  grant it, and it is released when you remove all keys.
 
 The score is a convenience heuristic, not a verdict.
 

@@ -99,6 +99,10 @@ function buildUrl(target, ioc) {
 // averaged away by another vendor having never seen the indicator, and several weak signals
 // that agree add up.
 
+// Firefox asks for consent before an extension sends page content anywhere; the selected text
+// going to a vendor counts. Chrome's manifest has no such key, so this is empty there.
+const DATA_COLLECTION = api.runtime.getManifest().browser_specific_settings?.gecko?.data_collection_permissions
+  ? { data_collection: ["websiteContent"] } : {};
 const TIMEOUT_MS = 8000;
 const CACHE_MS = 30 * 60 * 1000;
 const CACHE_VERSION = "4";

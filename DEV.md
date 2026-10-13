@@ -55,7 +55,7 @@ when menus are registered (`onInstalled`/`onStartup` vs top level).
    `hxxps://evil[.]com/login` with **D (Domain)**: 3 tabs for `evil.com`. A hash with
    **H (Hash)**: 1 VirusTotal tab.
 6. Gear icon > settings. Paste a dummy key (e.g. `test`) into VirusTotal and click
-   **Save and test keys**. Accept the site access prompt. The status should read
+   **Save and test keys**. Accept the site access prompt (Firefox also asks to share website content). The status should read
    **key rejected**. Look up an IP again: the breakdown says `VT key rejected`, the
    circle stays gray, links still work.
 7. With a real free key: the circle fills in, a confidence line appears, and an
