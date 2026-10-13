@@ -36,8 +36,11 @@ const SEARCH_TARGETS = {
 const IPV4 = /^(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)$/;
 const HASH = /^(?:[a-f0-9]{32}|[a-f0-9]{40}|[a-f0-9]{64})$/i;
 const DOMAIN = /^(?=.{4,253}$)(?:(?!-)[a-z0-9_-]{1,63}(?<!-)\.)+(?:[a-z]{2,63}|xn--[a-z0-9-]{1,59})$/i;
-// Private, loopback, link-local, CGNAT, documentation (TEST-NET), benchmarking, multicast/reserved.
-const PRIVATE_IP = /^(?:10\.|127\.|0\.|169\.254\.|192\.168\.|172\.(?:1[6-9]|2\d|3[01])\.|100\.(?:6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.|192\.0\.[02]\.|198\.51\.100\.|203\.0\.113\.|198\.1[89]\.|2(?:2[4-9]|[3-5]\d)\.|::1?$|f[cd][0-9a-f]{2}:|fe[89ab][0-9a-f]:|ff[0-9a-f]{2}:|2001:db8:)/i;
+// File names that would otherwise pass as domains (none of these are real TLDs).
+const FILE_NAME = /\.(?:exe|dll|sys|scr|msi|lnk|bat|cmd|vbs|hta|js|jar|txt|log|tmp|dat|bin|ini|cfg|json|xml|pdf|docx?|xlsx?|pptx?)$/i;
+// Private, loopback, link-local, CGNAT, documentation (TEST-NET), benchmarking, multicast/reserved,
+// and IPv4-mapped IPv6 (::ffff:a.b.c.d, which clean() turns into ::ffff:xxxx:xxxx).
+const PRIVATE_IP = /^(?:10\.|127\.|0\.|169\.254\.|192\.168\.|172\.(?:1[6-9]|2\d|3[01])\.|100\.(?:6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.|192\.0\.[02]\.|198\.51\.100\.|203\.0\.113\.|198\.1[89]\.|2(?:2[4-9]|[3-5]\d)\.|::1?$|::ffff:|f[cd][0-9a-f]{2}:|fe[89ab][0-9a-f]:|ff[0-9a-f]{2}:|2001:db8:)/i;
 
 function isIPv6(s) {
   if (!s.includes(":") || !/^[0-9a-f:.]+$/i.test(s)) return false;
@@ -47,7 +50,7 @@ function isIPv6(s) {
 function detect(s) {
   if (IPV4.test(s) || isIPv6(s)) return "ip";
   if (HASH.test(s)) return "hash";
-  if (DOMAIN.test(s)) return "domain";
+  if (DOMAIN.test(s) && !FILE_NAME.test(s)) return "domain";
   return null;
 }
 
@@ -57,7 +60,8 @@ const hashAlgo = (h) => ({ 32: "md5", 40: "sha1", 64: "sha256" })[h.length] || "
 // Trim, strip quotes, refang (evil[.]com, hxxp), and reduce a URL to its host.
 function clean(s) {
   s = s.trim()
-    .replace(/^["'`“”‘’<(]+|["'`“”‘’>),;!?]+$/g, "")
+    // The lookbehind keeps the trailing match linear: without it a long run of "," is O(n^2).
+    .replace(/^["'`“”‘’<(]+|(?<!["'`“”‘’>),;!?])["'`“”‘’>),;!?]+$/g, "")
     .replace(/\[\.\]|\(\.\)|\{\.\}|\[dot\]|\(dot\)/gi, ".")
     .replace(/\[:\]/g, ":")
     .replace(/^hxxp/i, "http")
@@ -67,7 +71,9 @@ function clean(s) {
   const v6 = s.match(/^\[([0-9a-f:.]+)\](?::\d+)?$/i);
   if (v6) s = v6[1];
   else s = s.replace(/^\[|\]$/g, "").replace(/^([^:]+):\d+$/, "$1");
-  if (/[^\x00-\x7f]/.test(s)) {
+  // Canonical IPv6 (2001:0DB8:0::1 -> 2001:db8::1) so range checks and cache keys line up.
+  if (isIPv6(s)) s = new URL(`http://[${s}]/`).hostname.slice(1, -1);
+  else if (/[^\x00-\x7f]/.test(s)) {
     try { s = new URL(`http://${s}/`).hostname; } catch {}
   }
   return s.replace(/\.$/, "").toLowerCase();
@@ -95,11 +101,12 @@ function buildUrl(target, ioc) {
 
 const TIMEOUT_MS = 8000;
 const CACHE_MS = 30 * 60 * 1000;
-const CACHE_VERSION = "3";
+const CACHE_VERSION = "4";
 const PRIOR = Math.log(0.15 / 0.85); // things analysts right-click are more often bad than random traffic
 const SINGLE_SOURCE_CAP = 59; // one vendor with only weak evidence can reach "suspicious", never "malicious"
 const STRONG = 2.5; // log-odds a single vendor needs before it may speak alone (e.g. 6+ VT engines on a domain)
-const OTX_ALLOWLIST = ["whitelist", "false_positive", "akamai", "alexa", "majestic"];
+const YEAR_S = 365 * 86400;
+const OTX_ALLOWLIST = ["whitelist", "false_positive", "majestic"];
 
 class LookupError extends Error {
   constructor(message, status) { super(message); this.status = status; }
@@ -147,12 +154,24 @@ const API_SOURCES = {
       // a real signal. Files get more skepticism for 1-2 hits (generic heuristics misfire).
       const eff = s.malicious + s.suspicious / 2;
       let llr = type === "hash" ? logCurve(eff, -1.2, 1.6, -0.6) : logCurve(eff, -0.6, 1.2, 0.5);
+      const parts = [`${s.malicious}/${total} engines`];
+      // IPs and domains change hands, so a verdict from a scan over a year old counts half.
+      const scanAge = Date.now() / 1000 - a.last_analysis_date;
+      if (type !== "hash" && scanAge > YEAR_S) {
+        llr /= 2;
+        parts.push(`scanned ${Math.floor(scanAge / YEAR_S)}y ago`);
+      }
       if (a.reputation) llr += clamp(-a.reputation / 50, -1, 1) * 0.8;
       const rank = Math.min(...Object.values(a.popularity_ranks || {}).map((r) => r.rank));
       if (rank <= 10000) llr -= 1.5;
       else if (rank <= 100000) llr -= 0.8;
+      // Newly registered domains are a staple of phishing and C2.
+      const age = Date.now() / 1000 - a.creation_date;
+      if (type === "domain" && age >= 0 && age < 30 * 86400) {
+        llr += 1;
+        parts.push(`registered ${Math.floor(age / 86400)}d ago`);
+      }
       const label = a.popular_threat_classification?.suggested_threat_label;
-      const parts = [`${s.malicious}/${total} engines`];
       if (label) parts.push(label);
       else if (rank <= 100000) parts.push(`top ${rank <= 10000 ? "10k" : "100k"} site`);
       return { finding: parts.join(" · "), llr: clamp(llr, -3, 5.5), evidence: true };
@@ -172,9 +191,13 @@ const API_SOURCES = {
       if (!d) return { finding: "no data", llr: 0 };
       if (d.isWhitelisted) return { finding: "allowlisted", llr: -2.5, evidence: true };
       if (!d.totalReports) return { finding: "0 reports", llr: -0.3 };
-      let llr = -0.5 + 4.5 * (d.abuseConfidenceScore / 100);
+      // Starts where "0 reports" does: being reported at 0% confidence is not a sign of clean.
+      let llr = -0.3 + 4.5 * (d.abuseConfidenceScore / 100);
       if (llr > 0 && d.numDistinctUsers <= 1) llr /= 2; // one reporter can be a grudge or a misconfig
-      return { finding: `${d.abuseConfidenceScore}% · ${plural(d.totalReports, "report")}`, llr, evidence: true };
+      const parts = [`${d.abuseConfidenceScore}%`, plural(d.totalReports, "report")];
+      if (d.numDistinctUsers <= 1) parts.push("1 reporter");
+      if (d.isTor) parts.push("Tor exit");
+      return { finding: parts.join(" · "), llr, evidence: true };
     }
   },
   otx: {
@@ -187,19 +210,45 @@ const API_SOURCES = {
     url: (type, ioc) => `https://otx.alienvault.com/api/v1/indicators/${type === "hash" ? "file" : type === "domain" ? "domain" : ioc.includes(":") ? "IPv6" : "IPv4"}/${encodeURIComponent(ioc)}/general`,
     // Indicator lookups ignore bad keys, so validate against the account endpoint instead.
     testUrl: "https://otx.alienvault.com/api/v1/users/me",
-    read(j) {
-      if ((j.validation || []).some((v) => OTX_ALLOWLIST.includes(v.source))) return { finding: "allowlisted", llr: -2.5, evidence: true };
+    read(j, type) {
+      const validation = j.validation || [];
+      // Domain allowlist entries are inherited from the registered domain (evil.duckdns.org comes
+      // back "Whitelisted domain duckdns.org"), so they only count when they name this domain.
+      // "Known False Positive" is per indicator.
+      const named = (v) => {
+        const host = (v.message || "").split(" ").pop();
+        return host === j.indicator || `www.${host}` === j.indicator;
+      };
+      if (validation.some((v) => OTX_ALLOWLIST.includes(v.source) && (type !== "domain" || v.source === "false_positive" || named(v)))) {
+        return { finding: "allowlisted", llr: -2.5, evidence: true };
+      }
       const pulses = j.pulse_info?.count || 0;
       if (!pulses) return { finding: "0 pulses", llr: -0.2 };
+      // A CDN address fronts thousands of sites, so pulses on the IP itself say nothing.
+      if (type === "ip" && validation.some((v) => v.source === "cdn")) return { finding: `${plural(pulses, "pulse")} · CDN range`, llr: 0 };
       const rel = j.pulse_info.related || {};
       const names = (key) => [...(rel.alienvault?.[key] || []), ...(rel.other?.[key] || [])]
         .map((f) => (typeof f === "string" ? f : f.display_name || f.name)).filter(Boolean);
       const families = [...new Set(names("malware_families"))];
       const adversaries = [...new Set(names("adversary"))];
       // Pulses are community feeds of mixed quality, so OTX alone is capped below STRONG.
-      const llr = Math.min(2.2, 0.7 * Math.log(1 + pulses) + (families.length ? 0.8 : 0) + (adversaries.length ? 0.5 : 0));
-      const tags = [...adversaries, ...families].slice(0, 2);
-      return { finding: [plural(pulses, "pulse"), ...tags].join(" · "), llr, evidence: true };
+      let llr = Math.min(2.2, 0.7 * Math.log(1 + pulses) + (families.length ? 0.8 : 0) + (adversaries.length ? 0.5 : 0));
+      const parts = [plural(pulses, "pulse")];
+      if (type !== "hash") {
+        // Sandbox runs put every host a sample touches into pulses, so shared infrastructure (cloud
+        // front doors, code hosting, link shorteners) piles up pulses from dozens of unrelated families.
+        if (families.length > 10) {
+          llr *= 0.3;
+          parts.push(`${families.length} unrelated families`);
+        }
+        const newest = Math.max(...(j.pulse_info.pulses || []).map((p) => Date.parse(p.modified?.slice(0, 19))));
+        if (newest > 0 && Date.now() - newest > YEAR_S * 1000) {
+          llr /= 2;
+          parts.push(`last pulse ${Math.floor((Date.now() - newest) / YEAR_S / 1000)}y ago`);
+        }
+      }
+      if (parts.length === 1) parts.push(...[...adversaries, ...families].slice(0, 2));
+      return { finding: parts.join(" · "), llr, evidence: true };
     }
   }
 };
@@ -222,8 +271,10 @@ function combine(results) {
   if (capped) score = SINGLE_SOURCE_CAP;
   const bad = ev.some((r) => r.llr >= 1);
   const good = ev.some((r) => r.llr <= -1);
+  // "high" needs corroboration: two vendors each leaning the way the total does.
+  const agree = ev.filter((r) => r.llr * Math.sign(sum) >= 0.5).length;
   const confidence = bad && good ? "mixed"
-    : ev.length >= 2 && Math.abs(sum) >= 2 ? "high"
+    : agree >= 2 && Math.abs(sum) >= 2 ? "high"
     : strong || ev.length >= 2 ? "medium" : "low";
   return { score, sources: ev.length, confidence, capped };
 }

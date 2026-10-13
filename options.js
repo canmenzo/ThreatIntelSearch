@@ -5,7 +5,7 @@ const $ = (id) => document.getElementById(id);
 const STATUS = {
   unset: ["not set", ""],
   saved: ["saved, not tested yet", ""],
-  testing: ["testing…", ""],
+  testing: ["testing…", "testing"],
   ok: ["key OK", "ok"],
   rejected: ["key rejected", "bad"],
   limited: ["rate limited (key accepted)", "warnc"],

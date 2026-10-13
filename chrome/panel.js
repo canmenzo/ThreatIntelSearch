@@ -12,6 +12,7 @@ const CIRC = 2 * Math.PI * 42;
 const HOW_URL = "https://github.com/canmenzo/ThreatIntelSearch#how-the-score-works";
 const NAME = { ip: "IP", domain: "domain", hash: "hash" };
 const $ = (id) => document.getElementById(id);
+const REDUCED_MOTION = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 let current = TYPES.includes(params.get("type")) ? params.get("type") : detected;
 let myWindowId = null;
@@ -114,6 +115,7 @@ function renderSources() {
     const url = buildUrl(target, ioc);
     const b = el("button", "src");
     b.title = `${url}\nShortcut: ${i + 1}`;
+    b.style.setProperty("--i", i);
     b.append(el("kbd", null, String(i + 1)), el("span", "src-name", target.name), icon("ArrowUp"));
     b.onclick = () => openTabs([url]);
     box.append(b);
@@ -127,10 +129,15 @@ function vendorUrl(id) {
 
 function countUp(to) {
   cancelAnimationFrame(countFrame);
+  if (REDUCED_MOTION) {
+    shownPct = to;
+    $("pct").textContent = `${to}%`;
+    return;
+  }
   const from = shownPct;
   const start = performance.now();
   const step = (now) => {
-    const t = Math.min(1, (now - start) / 800);
+    const t = Math.min(1, (now - start) / 400);
     shownPct = Math.round(from + (to - from) * (1 - (1 - t) ** 3));
     $("pct").textContent = `${shownPct}%`;
     if (t < 1) countFrame = requestAnimationFrame(step);
@@ -139,7 +146,7 @@ function countUp(to) {
 }
 
 function evidenceRow(id, r, i) {
-  const row = el("button", "ev-row");
+  const row = el("button", r ? "ev-row" : "ev-row pending");
   row.style.setProperty("--i", i);
   const url = vendorUrl(id);
   if (url) {
@@ -157,20 +164,28 @@ function show(state, { note = "", action, rows = [], ids = [], checkedAt } = {})
   const s = state && state !== "loading" && state !== "none" ? state.score : null;
   const cls = state === "loading" ? "loading" : s == null ? "none" : s < 25 ? "clean" : s < 60 ? "sus" : "mal";
   $("score").className = `score ${cls}`;
-  $("arc").style.strokeDashoffset = state === "loading" ? CIRC * 0.75 : s == null ? CIRC : CIRC * (1 - Math.max(s, 2) / 100);
+  const arc = $("arc");
+  if (s != null) {
+    // Empty the ring without a transition so every result sweeps in from the top.
+    arc.style.transition = "none";
+    arc.style.strokeDashoffset = CIRC;
+    arc.getBoundingClientRect();
+    arc.style.transition = "";
+  }
+  arc.style.strokeDashoffset = state === "loading" ? CIRC * 0.75 : s == null ? CIRC : CIRC * (1 - Math.max(s, 2) / 100);
 
   if (s == null) {
     cancelAnimationFrame(countFrame);
     shownPct = 0;
-    $("pct").textContent = state === "loading" ? "…" : "—";
+    $("pct").textContent = state === "loading" ? "" : "—";
   } else {
     countUp(s);
   }
-  $("label").textContent = state === "loading" ? "checking…" : verdict(s);
+  $("label").textContent = state === "loading" ? "analyzing…" : verdict(s);
   $("verdict-icon").replaceChildren(...(VERDICT_ICON[cls] ? [icon(VERDICT_ICON[cls])] : []));
 
   const conf = $("confidence");
-  conf.replaceChildren(note);
+  conf.replaceChildren(state === "loading" ? `querying ${plural(ids.length, "vendor")}` : note);
   if (s != null) {
     const n = plural(state.sources, "source");
     conf.textContent = state.confidence === "mixed" ? `sources disagree · ${n}` : `${state.confidence} confidence · ${n}${state.capped ? " · capped" : ""}`;

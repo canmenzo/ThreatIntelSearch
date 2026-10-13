@@ -21,9 +21,11 @@
       </div>
       <div class="raw" id="raw" hidden></div>
       <div class="types" id="types">
-        <button data-type="ip">IP</button>
-        <button data-type="domain">DOMAIN</button>
-        <button data-type="hash">HASH</button>
+        <div class="seg" role="group" aria-label="Indicator type">
+          <button data-type="ip">IP</button>
+          <button data-type="domain">DOMAIN</button>
+          <button data-type="hash">HASH</button>
+        </div>
         <span class="toast" id="toast"></span>
         <span class="algo" id="algo"></span>
       </div>
@@ -38,6 +40,7 @@
           <span id="pct">—</span>
         </div>
         <div class="verdict">
+          <div class="eyebrow">Threat score</div>
           <div class="label"><span id="verdict-icon"></span><span id="label">not enough data</span></div>
           <div class="confidence" id="confidence"></div>
         </div>
