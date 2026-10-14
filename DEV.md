@@ -71,7 +71,7 @@ PowerShell 5.1's `Compress-Archive` writes backslashes, which the stores can rej
 
 ```powershell
 # Firefox / AMO
-tar.exe --format zip -cf threat_intel_search-2.0.0.xpi manifest.json background.js common.js icons.js ui.css panel.html panel.js options.html options.js
+tar.exe --format zip -cf threat_intel_search-2.0.0.xpi manifest.json background.js common.js icons.js ui.css panel.html panel.js options.html options.js icons
 
 # Chrome Web Store (leaves out chrome/store/)
 tar.exe --format zip -cf threat_intel_search-chrome-2.0.0.zip -C chrome manifest.json background.js common.js icons.js ui.css panel.html panel.js options.html options.js icons

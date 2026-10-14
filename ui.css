@@ -136,13 +136,10 @@ button:disabled { cursor: default; }
   letter-spacing: .01em;
 }
 
-.brand .icon {
+.brand-icon {
   width: 22px;
   height: 22px;
-  padding: 4px;
-  border-radius: 7px;
-  background: var(--accent-soft);
-  color: var(--accent);
+  flex: none;
 }
 
 h2 {
@@ -624,7 +621,7 @@ kbd {
 
 .opts > * { animation: rise var(--med) var(--ease) both; }
 .opts .brand { font-size: 16px; }
-.opts .brand .icon { width: 28px; height: 28px; padding: 5px; border-radius: 8px; }
+.opts .brand-icon { width: 28px; height: 28px; }
 .opts p { margin: 0; line-height: 1.5; }
 
 .card {
