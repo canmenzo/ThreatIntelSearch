@@ -39,8 +39,9 @@ const DOMAIN = /^(?=.{4,253}$)(?:(?!-)[a-z0-9_-]{1,63}(?<!-)\.)+(?:[a-z]{2,63}|x
 // File names that would otherwise pass as domains (none of these are real TLDs).
 const FILE_NAME = /\.(?:exe|dll|sys|scr|msi|lnk|bat|cmd|vbs|hta|js|jar|txt|log|tmp|dat|bin|ini|cfg|json|xml|pdf|docx?|xlsx?|pptx?)$/i;
 // Private, loopback, link-local, CGNAT, documentation (TEST-NET), benchmarking, multicast/reserved,
-// and IPv4-mapped IPv6 (::ffff:a.b.c.d, which clean() turns into ::ffff:xxxx:xxxx).
-const PRIVATE_IP = /^(?:10\.|127\.|0\.|169\.254\.|192\.168\.|172\.(?:1[6-9]|2\d|3[01])\.|100\.(?:6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.|192\.0\.[02]\.|198\.51\.100\.|203\.0\.113\.|198\.1[89]\.|2(?:2[4-9]|[3-5]\d)\.|::1?$|::ffff:|f[cd][0-9a-f]{2}:|fe[89ab][0-9a-f]:|ff[0-9a-f]{2}:|2001:db8:)/i;
+// and IPv6 starting with "::" (unspecified, loopback, IPv4-compatible ::a.b.c.d and IPv4-mapped
+// ::ffff:a.b.c.d, which clean() turns into ::xxxx:xxxx / ::ffff:xxxx:xxxx) or in deprecated site-local fec0::/10.
+const PRIVATE_IP = /^(?:10\.|127\.|0\.|169\.254\.|192\.168\.|172\.(?:1[6-9]|2\d|3[01])\.|100\.(?:6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.|192\.0\.[02]\.|198\.51\.100\.|203\.0\.113\.|198\.1[89]\.|2(?:2[4-9]|[3-5]\d)\.|::|f[cd][0-9a-f]{2}:|fe[89a-f][0-9a-f]:|ff[0-9a-f]{2}:|2001:db8:)/i;
 
 function isIPv6(s) {
   if (!s.includes(":") || !/^[0-9a-f:.]+$/i.test(s)) return false;
