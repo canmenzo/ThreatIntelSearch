@@ -37,7 +37,7 @@ const IPV4 = /^(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1
 const HASH = /^(?:[a-f0-9]{32}|[a-f0-9]{40}|[a-f0-9]{64})$/i;
 const DOMAIN = /^(?=.{4,253}$)(?:(?!-)[a-z0-9_-]{1,63}(?<!-)\.)+(?:[a-z]{2,63}|xn--[a-z0-9-]{1,59})$/i;
 // File names that would otherwise pass as domains (none of these are real TLDs).
-const FILE_NAME = /\.(?:exe|dll|sys|scr|msi|lnk|bat|cmd|vbs|hta|js|jar|txt|log|tmp|dat|bin|ini|cfg|json|xml|pdf|docx?|xlsx?|pptx?)$/i;
+const FILE_NAME = /\.(?:exe|dll|sys|scr|msi|lnk|bat|cmd|vbs|hta|js|jar|txt|log|tmp|dat|bin|ini|cfg|json|xml|pdf|docx?|xlsx?|pptx?|php|aspx?|jsp|html?|css|png|jpe?g|gif|svg|ico|iso|rar|gz|tar|ya?ml|conf|csv|sql|bak|apk|dmg|deb|rpm|pif|cpl|ocx|wsf|chm|rtf|eml|msg|dmp|pcap|evtx)$/i;
 // Private, loopback, link-local, CGNAT, documentation (TEST-NET), benchmarking, multicast/reserved,
 // and IPv6 starting with "::" (unspecified, loopback, IPv4-compatible ::a.b.c.d and IPv4-mapped
 // ::ffff:a.b.c.d, which clean() turns into ::xxxx:xxxx / ::ffff:xxxx:xxxx) or in deprecated site-local fec0::/10.
@@ -63,8 +63,10 @@ function clean(s) {
   s = s.trim()
     // The lookbehind keeps the trailing match linear: without it a long run of "," is O(n^2).
     .replace(/^["'`“”‘’<(]+|(?<!["'`“”‘’>),;!?])["'`“”‘’>),;!?]+$/g, "")
-    .replace(/\[\.\]|\(\.\)|\{\.\}|\[dot\]|\(dot\)/gi, ".")
+    .replace(/\[\.\]|\(\.\)|\{\.\}|\[dot\]|\(dot\)|\\./gi, ".")
+    .replace(/\[:\/\/\]/g, "://")
     .replace(/\[:\]/g, ":")
+    .replace(/\[@\]|\[at\]|\(at\)/gi, "@")
     .replace(/^hxxp/i, "http")
     .replace(/^[a-z][a-z0-9+.-]*:\/\//i, "")
     .replace(/^[^/?#@]*@/, "")
@@ -80,11 +82,16 @@ function clean(s) {
   return s.replace(/\.$/, "").toLowerCase();
 }
 
+// Every distinct indicator in a selection (a log line, a table row), in order.
+function extract(raw) {
+  return [...new Set(raw.split(/[\s,;|=]+/).map(clean).filter(detect))];
+}
+
 // Whole selection first; if that isn't an indicator, the first token that is (preferring the picked type).
 function normalize(raw, preferred) {
   const whole = clean(raw);
   if (detect(whole)) return whole;
-  const found = raw.split(/[\s,;|]+/).map(clean).filter(detect);
+  const found = extract(raw);
   return found.find((t) => detect(t) === preferred) || found[0] || whole;
 }
 
@@ -106,12 +113,27 @@ const DATA_COLLECTION = api.runtime.getManifest().browser_specific_settings?.gec
   ? { data_collection: ["websiteContent"] } : {};
 const TIMEOUT_MS = 8000;
 const CACHE_MS = 30 * 60 * 1000;
-const CACHE_VERSION = "4";
+const CACHE_VERSION = "5";
 const PRIOR = Math.log(0.15 / 0.85); // things analysts right-click are more often bad than random traffic
 const SINGLE_SOURCE_CAP = 59; // one vendor with only weak evidence can reach "suspicious", never "malicious"
 const STRONG = 2.5; // log-odds a single vendor needs before it may speak alone (e.g. 6+ VT engines on a domain)
-const YEAR_S = 365 * 86400;
+const CONFLICT_FLOOR = 30; // a strong detection that other vendors contradict still reads "suspicious", never "likely clean"
+const DAY_S = 86400;
+const YEAR_S = 365 * DAY_S;
 const OTX_ALLOWLIST = ["whitelist", "false_positive", "majestic"];
+// Engines whose detections are rarely wrong. Compared lowercased with punctuation removed, so
+// "ESET-NOD32" and "Google Safebrowsing" match. An engine VirusTotal renames just stops counting.
+const VT_MAJOR = new Set([
+  "microsoft", "kaspersky", "eset", "esetnod32", "bitdefender", "sophos", "crowdstrike", "symantec", "trendmicro",
+  "google", "googlesafebrowsing", "fortinet", "drweb", "gdata", "avira", "malwarebytes", "sentinelone", "elastic",
+  "paloalto", "paloaltonetworks", "emsisoft", "fsecure", "withsecure", "webroot", "forcepointthreatseeker",
+  "netcraft", "phishtank", "openphish", "spamhaus", "urlhaus", "threatfox"
+]);
+const VT_BAD_CATEGORY = /phish|malware|malicious|infection|command and control|botnet|ransom|spyware|scam|fraud/i;
+// Addresses that front many unrelated customers: abuse reports there say little about the address.
+const SHARED_USAGE = /content delivery|search engine/i;
+// Context shown under the indicator, in this order. The first vendor to supply one wins.
+const FACT_ORDER = ["file", "name", "net", "usage", "country", "tor", "registrar", "created", "seen"];
 
 class LookupError extends Error {
   constructor(message, status) { super(message); this.status = status; }
@@ -122,24 +144,30 @@ async function getJson(url, headers) {
   try {
     res = await fetch(url, { headers, credentials: "omit", referrerPolicy: "no-referrer", cache: "no-store", signal: AbortSignal.timeout(TIMEOUT_MS) });
   } catch (e) {
-    throw new LookupError(e.name === "TimeoutError" ? "timed out" : "unreachable", "error");
+    throw new LookupError(e.name === "TimeoutError" ? "Timed out" : "Unreachable", "error");
   }
-  if (res.status === 401 || res.status === 403) throw new LookupError("key rejected", "rejected");
-  if (res.status === 429) throw new LookupError("rate limited", "limited");
+  if (res.status === 401 || res.status === 403) throw new LookupError("Key rejected", "rejected");
+  if (res.status === 429) throw new LookupError("Rate limited", "limited");
   if (res.status === 404) return null;
   if (!res.ok) throw new LookupError(`HTTP ${res.status}`, "error");
   return res.json();
 }
 
-const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+const plural = (n, word, many = `${word}s`) => `${n} ${n === 1 ? word : many}`;
 const clamp = (x, lo, hi) => Math.min(hi, Math.max(lo, x));
+const isoDay = (seconds) => new Date(seconds * 1000).toISOString().slice(0, 10);
+const engineKey = (name) => String(name).toLowerCase().replace(/[^a-z0-9]/g, "");
 
 // Log curve for engine counts: a*ln(n) + b from one hit up, straight line from `zero` below that,
 // so half a hit (one "suspicious") lands between zero hits and one hit instead of below zero.
 const logCurve = (n, zero, a, b) => (n >= 1 ? a * Math.log(n) + b : zero + n * (b - zero));
 
-// read(json, type) returns { finding, llr, evidence }. evidence: false means the vendor had
-// nothing substantive (its small llr still counts once some other vendor has evidence).
+// The first part is the headline number, the rest explains it.
+const evidence = (parts, llr, facts) => ({ finding: parts[0], detail: parts.slice(1).join(" · "), llr, evidence: true, facts });
+
+// read(json, type) returns { finding, detail, llr, evidence, facts }. evidence: false means the
+// vendor had nothing substantive (its small llr still counts once some other vendor has evidence).
+// facts is context that doesn't move the score: network owner, country, file type.
 const API_SOURCES = {
   vt: {
     name: "VirusTotal",
@@ -152,14 +180,44 @@ const API_SOURCES = {
     testUrl: "https://www.virustotal.com/api/v3/ip_addresses/8.8.8.8",
     read(j, type) {
       const a = j.data?.attributes || {};
+      const facts = {};
+      if (type === "ip") {
+        if (a.as_owner) facts.net = a.asn ? `AS${a.asn} ${a.as_owner}` : a.as_owner;
+        if (a.country) facts.country = a.country;
+      } else if (type === "domain") {
+        if (a.registrar) facts.registrar = a.registrar;
+        if (a.creation_date) facts.created = `Registered ${isoDay(a.creation_date)}`;
+      } else {
+        if (a.type_description) facts.file = a.type_description;
+        if (a.meaningful_name) facts.name = a.meaningful_name;
+        if (a.first_submission_date) facts.seen = `First seen ${isoDay(a.first_submission_date)}`;
+      }
       const s = a.last_analysis_stats;
       const total = s ? s.malicious + s.suspicious + s.harmless + s.undetected : 0;
-      if (!total) return { finding: "never analysed", llr: 0 };
+      if (!total) return { finding: "Never analyzed", llr: 0, facts };
       // Engine counts, not ratios: most engines never rate infrastructure, so 5/94 on an IP is
       // a real signal. Files get more skepticism for 1-2 hits (generic heuristics misfire).
       const eff = s.malicious + s.suspicious / 2;
       let llr = type === "hash" ? logCurve(eff, -1.2, 1.6, -0.6) : logCurve(eff, -0.6, 1.2, 0.5);
       const parts = [`${s.malicious}/${total} engines`];
+      // Who flagged it matters as much as how many: one major engine outweighs a few long-tail ones.
+      const results = Object.entries(a.last_analysis_results || {});
+      const major = results.filter(([name, r]) => r.category === "malicious" && VT_MAJOR.has(engineKey(r.engine_name || name)))
+        .map(([name, r]) => r.engine_name || name);
+      if (major.length) {
+        llr += Math.min(1.5, 0.5 * major.length);
+        parts.push(`incl. ${major.slice(0, 2).join(", ")}`);
+      } else if (type === "hash" && results.length && eff >= 1 && eff <= 3) {
+        llr -= 0.4;
+        parts.push("no major engines");
+      }
+      if (type === "domain") {
+        const bad = Object.values(a.categories || {}).filter((c) => VT_BAD_CATEGORY.test(c));
+        if (bad.length) {
+          llr += bad.length > 1 ? 1 : 0.6;
+          parts.push(`categorized ${String(bad[0]).toLowerCase().slice(0, 28)}`);
+        }
+      }
       // IPs and domains change hands, so a verdict from a scan over a year old counts half.
       const scanAge = Date.now() / 1000 - a.last_analysis_date;
       if (type !== "hash" && scanAge > YEAR_S) {
@@ -172,14 +230,33 @@ const API_SOURCES = {
       else if (rank <= 100000) llr -= 0.8;
       // Newly registered domains are a staple of phishing and C2.
       const age = Date.now() / 1000 - a.creation_date;
-      if (type === "domain" && age >= 0 && age < 30 * 86400) {
+      if (type === "domain" && age >= 0 && age < 30 * DAY_S) {
         llr += 1;
-        parts.push(`registered ${Math.floor(age / 86400)}d ago`);
+        parts.push(`registered ${Math.floor(age / DAY_S)}d ago`);
+      }
+      if (type === "hash") {
+        const sandboxes = Object.values(a.sandbox_verdicts || {}).filter((v) => v.category === "malicious").length;
+        if (sandboxes) {
+          llr += sandboxes > 1 ? 1.2 : 0.8;
+          parts.push(`${plural(sandboxes, "sandbox", "sandboxes")} flagged it`);
+        }
+        // Software a known vendor ships, or that carries a valid signature, is usually a false
+        // positive when only a few engines flag it. Stolen certificates exist, so the signature
+        // stops counting once detections pile up.
+        const distributor = a.known_distributors?.distributors?.[0];
+        const signer = a.signature_info?.verified === "Signed" && String(a.signature_info.signers || "").split(";")[0].trim();
+        if (distributor) {
+          llr -= 1.5;
+          parts.push(`distributed by ${distributor}`);
+        } else if (signer && eff < 5) {
+          llr -= 1;
+          parts.push(`signed by ${signer}`);
+        }
       }
       const label = a.popular_threat_classification?.suggested_threat_label;
       if (label) parts.push(label);
       else if (rank <= 100000) parts.push(`top ${rank <= 10000 ? "10k" : "100k"} site`);
-      return { finding: parts.join(" · "), llr: clamp(llr, -3, 5.5), evidence: true };
+      return evidence(parts, clamp(llr, -3, 5.5), facts);
     }
   },
   abuseipdb: {
@@ -193,16 +270,30 @@ const API_SOURCES = {
     testUrl: "https://api.abuseipdb.com/api/v2/check?ipAddress=8.8.8.8",
     read(j) {
       const d = j.data;
-      if (!d) return { finding: "no data", llr: 0 };
-      if (d.isWhitelisted) return { finding: "allowlisted", llr: -2.5, evidence: true };
-      if (!d.totalReports) return { finding: "0 reports", llr: -0.3 };
+      if (!d) return { finding: "No data", llr: 0 };
+      const facts = {};
+      if (d.isp) facts.net = d.isp;
+      if (d.usageType) facts.usage = d.usageType;
+      if (d.countryCode) facts.country = d.countryCode;
+      if (d.isTor) facts.tor = "Tor exit";
+      if (d.isWhitelisted) return evidence(["Allowlisted"], -2.5, facts);
+      if (!d.totalReports) return { finding: "0 reports", llr: -0.3, facts };
       // Starts where "0 reports" does: being reported at 0% confidence is not a sign of clean.
       let llr = -0.3 + 4.5 * (d.abuseConfidenceScore / 100);
-      if (llr > 0 && d.numDistinctUsers <= 1) llr /= 2; // one reporter can be a grudge or a misconfig
-      const parts = [`${d.abuseConfidenceScore}%`, plural(d.totalReports, "report")];
-      if (d.numDistinctUsers <= 1) parts.push("1 reporter");
-      if (d.isTor) parts.push("Tor exit");
-      return { finding: parts.join(" · "), llr, evidence: true };
+      const parts = [`${d.abuseConfidenceScore}% abuse score`, plural(d.totalReports, "report")];
+      if (d.numDistinctUsers <= 1) {
+        if (llr > 0) llr /= 2; // one reporter can be a grudge or a misconfig
+        parts.push("1 reporter");
+      } else {
+        parts.push(`${d.numDistinctUsers} reporters`);
+      }
+      if (llr > 0 && SHARED_USAGE.test(d.usageType || "")) {
+        llr /= 2;
+        parts.push("shared infrastructure");
+      }
+      const days = Math.floor((Date.now() - Date.parse(d.lastReportedAt)) / (DAY_S * 1000));
+      if (days >= 0) parts.push(days ? `last report ${days}d ago` : "last report today");
+      return evidence(parts, llr, facts);
     }
   },
   otx: {
@@ -216,6 +307,9 @@ const API_SOURCES = {
     // Indicator lookups ignore bad keys, so validate against the account endpoint instead.
     testUrl: "https://otx.alienvault.com/api/v1/users/me",
     read(j, type) {
+      const facts = {};
+      if (type === "ip" && j.asn) facts.net = j.asn;
+      if (type === "ip" && j.country_code) facts.country = j.country_code;
       const validation = j.validation || [];
       // Domain allowlist entries are inherited from the registered domain (evil.duckdns.org comes
       // back "Whitelisted domain duckdns.org"), so they only count when they name this domain.
@@ -225,12 +319,12 @@ const API_SOURCES = {
         return host === j.indicator || `www.${host}` === j.indicator;
       };
       if (validation.some((v) => OTX_ALLOWLIST.includes(v.source) && (type !== "domain" || v.source === "false_positive" || named(v)))) {
-        return { finding: "allowlisted", llr: -2.5, evidence: true };
+        return evidence(["Allowlisted"], -2.5, facts);
       }
       const pulses = j.pulse_info?.count || 0;
-      if (!pulses) return { finding: "0 pulses", llr: -0.2 };
+      if (!pulses) return { finding: "0 pulses", llr: -0.2, facts };
       // A CDN address fronts thousands of sites, so pulses on the IP itself say nothing.
-      if (type === "ip" && validation.some((v) => v.source === "cdn")) return { finding: `${plural(pulses, "pulse")} · CDN range`, llr: 0 };
+      if (type === "ip" && validation.some((v) => v.source === "cdn")) return { finding: plural(pulses, "pulse"), detail: "CDN range", llr: 0, facts };
       const rel = j.pulse_info.related || {};
       const names = (key) => [...(rel.alienvault?.[key] || []), ...(rel.other?.[key] || [])]
         .map((f) => (typeof f === "string" ? f : f.display_name || f.name)).filter(Boolean);
@@ -253,14 +347,14 @@ const API_SOURCES = {
         }
       }
       if (parts.length === 1) parts.push(...[...adversaries, ...families].slice(0, 2));
-      return { finding: parts.join(" · "), llr, evidence: true };
+      return evidence(parts, llr, facts);
     }
   }
 };
 
 async function lookup(id, type, ioc, key) {
   const j = await getJson(API_SOURCES[id].url(type, ioc), API_SOURCES[id].headers(key));
-  return j ? API_SOURCES[id].read(j, type) : { finding: "not found", llr: 0 };
+  return j ? API_SOURCES[id].read(j, type) : { finding: "Not found", llr: 0 };
 }
 
 const testKey = (id, key) => getJson(API_SOURCES[id].testUrl, API_SOURCES[id].headers(key));
@@ -270,18 +364,28 @@ function combine(results) {
   const ev = results.filter((r) => r.evidence);
   if (!ev.length) return null;
   const sum = results.reduce((a, r) => a + (r.llr || 0), 0);
-  let score = Math.round(100 / (1 + Math.exp(-(PRIOR + sum))));
+  // A heuristic is never certain, so the scale stops at 1 and 99.
+  let score = clamp(Math.round(100 / (1 + Math.exp(-(PRIOR + sum)))), 1, 99);
   const strong = ev.some((r) => Math.abs(r.llr) >= STRONG);
   const capped = ev.length === 1 && !strong && score > SINGLE_SOURCE_CAP;
   if (capped) score = SINGLE_SOURCE_CAP;
   const bad = ev.some((r) => r.llr >= 1);
   const good = ev.some((r) => r.llr <= -1);
+  // Calling something clean by mistake costs an analyst more than a second look does, so a
+  // strong detection is never cancelled all the way down to "likely clean" by another vendor.
+  const floored = good && score < CONFLICT_FLOOR && ev.some((r) => r.llr >= STRONG);
+  if (floored) score = CONFLICT_FLOOR;
   // "high" needs corroboration: two vendors each leaning the way the total does.
   const agree = ev.filter((r) => r.llr * Math.sign(sum) >= 0.5).length;
   const confidence = bad && good ? "mixed"
     : agree >= 2 && Math.abs(sum) >= 2 ? "high"
     : strong || ev.length >= 2 ? "medium" : "low";
-  return { score, sources: ev.length, confidence, capped };
+  return { score, sources: ev.length, confidence, capped, floored };
+}
+
+function mergeFacts(rows) {
+  const all = Object.assign({}, ...rows.map((r) => r.facts).reverse());
+  return FACT_ORDER.map((k) => all[k]).filter(Boolean);
 }
 
 // Per-vendor tone for the evidence list.
@@ -294,6 +398,6 @@ function tone(r) {
 }
 
 function verdict(score) {
-  if (score == null) return "not enough data";
-  return score < 25 ? "likely clean" : score < 60 ? "suspicious" : "malicious";
+  if (score == null) return "Not enough data";
+  return score < 25 ? "Likely clean" : score < 60 ? "Suspicious" : "Malicious";
 }

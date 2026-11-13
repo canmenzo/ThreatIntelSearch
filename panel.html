@@ -11,45 +11,47 @@
   <main class="panel" id="panel">
     <header class="bar">
       <span class="brand"><img class="brand-icon" src="icons/icon48.png" width="22" height="22" alt="">Threat Intel Search</span>
-      <button class="icon-btn" id="settings" title="Settings and API keys"><i data-icon="Setting"></i></button>
+      <button class="icon-btn" id="settings" title="Settings and API keys" aria-label="Settings and API keys"><i data-icon="Setting"></i></button>
     </header>
 
     <section class="ioc-card">
       <div class="ioc-row">
         <code id="ioc"></code>
-        <button class="icon-btn" id="copy" title="Copy (C)"><i data-icon="Document"></i></button>
-        <button class="icon-btn defang" id="defang" title="Copy defanged (D)">[.]</button>
+        <button class="icon-btn" id="copy" title="Copy (C)" aria-label="Copy"><i data-icon="Document"></i></button>
+        <button class="icon-btn defang" id="defang" title="Copy defanged (D)" aria-label="Copy defanged">[.]</button>
       </div>
+      <div class="facts" id="facts" hidden></div>
       <div class="raw" id="raw" hidden></div>
+      <div class="others" id="others" hidden></div>
       <div class="types" id="types">
         <div class="seg" role="group" aria-label="Indicator type">
           <button data-type="ip">IP</button>
-          <button data-type="domain">DOMAIN</button>
-          <button data-type="hash">HASH</button>
+          <button data-type="domain">Domain</button>
+          <button data-type="hash">Hash</button>
         </div>
-        <span class="toast" id="toast"></span>
+        <span class="toast" id="toast" role="status"></span>
         <span class="algo" id="algo"></span>
       </div>
     </section>
 
     <div class="warn" id="warn" hidden><i data-icon="Danger"></i><span id="warn-text"></span></div>
 
-    <section class="score none" id="score">
+    <section class="score empty" id="score">
       <div class="score-head">
         <div class="gauge">
-          <svg viewBox="0 0 100 100"><circle class="track" cx="50" cy="50" r="42"/><circle class="arc" id="arc" cx="50" cy="50" r="42"/></svg>
-          <span id="pct">—</span>
+          <svg viewBox="0 0 100 100"><circle class="track" cx="50" cy="50" r="44"/><circle class="arc" id="arc" cx="50" cy="50" r="44"/></svg>
+          <span id="pct">--</span>
         </div>
         <div class="verdict">
-          <div class="eyebrow">Threat score</div>
-          <div class="label"><span id="verdict-icon"></span><span id="label">not enough data</span></div>
+          <div class="label" id="label"></div>
           <div class="confidence" id="confidence"></div>
         </div>
+        <button class="btn" id="score-action" hidden></button>
       </div>
       <div class="evidence" id="evidence"></div>
       <div class="score-foot" id="score-foot" hidden>
-        <span id="cached"></span>
-        <button class="link" id="refresh">refresh</button>
+        <span><span id="cached"></span> · <button class="link" id="refresh" title="Refresh (R)">Refresh</button></span>
+        <button class="link" id="how" title="The score is a heuristic, not a verdict">How scoring works</button>
       </div>
     </section>
 
@@ -59,10 +61,16 @@
     </section>
 
     <section class="openall" id="openall">
-      <button class="primary" id="open-all"><i data-icon="Send"></i><span id="open-all-label"></span></button>
+      <button class="primary" id="open-all" title="Open all (O)"><i data-icon="Send"></i><span id="open-all-label"></span></button>
     </section>
 
-    <footer class="foot"><i data-icon="InfoCircle"></i>not a verdict · <button class="link" id="how">how scoring works</button></footer>
+    <footer class="foot">
+      <span><kbd>C</kbd>Copy</span>
+      <span id="hint-defang"><kbd>D</kbd>Defang</span>
+      <span><kbd>R</kbd>Refresh</span>
+      <span><kbd>O</kbd>Open all</span>
+      <span><kbd>Esc</kbd>Close</span>
+    </footer>
   </main>
   <script src="common.js"></script>
   <script src="icons.js"></script>

@@ -2,15 +2,17 @@
 
 const $ = (id) => document.getElementById(id);
 
+const TYPE_LABEL = { ip: "IPs", domain: "domains", hash: "hashes" };
+
 const STATUS = {
-  unset: ["not set", ""],
-  saved: ["saved, not tested yet", ""],
-  testing: ["testing…", "testing"],
-  ok: ["key OK", "ok"],
-  rejected: ["key rejected", "bad"],
-  limited: ["rate limited (key accepted)", "warnc"],
-  permission: ["site access not granted", "bad"],
-  error: ["couldn't reach the vendor", "warnc"]
+  unset: ["Not set", ""],
+  saved: ["Saved, not tested yet", ""],
+  testing: ["Testing…", "testing"],
+  ok: ["Key OK", "ok"],
+  rejected: ["Key rejected", "bad"],
+  limited: ["Rate limited (key accepted)", "warnc"],
+  permission: ["Site access not granted", "bad"],
+  error: ["Couldn't reach the vendor", "warnc"]
 };
 
 function setStatus(id, status) {
@@ -25,7 +27,7 @@ function keyCard(id, src) {
   label.textContent = `${src.name} API key `;
   const covers = document.createElement("span");
   covers.className = "muted";
-  covers.textContent = `· ${src.types.join(", ")}`;
+  covers.textContent = `· ${src.types.map((t) => TYPE_LABEL[t]).join(", ")}`;
   label.append(covers);
 
   const input = document.createElement("input");
@@ -33,7 +35,7 @@ function keyCard(id, src) {
   input.type = "password";
   input.autocomplete = "off";
   input.spellcheck = false;
-  input.placeholder = "optional";
+  input.placeholder = "Optional";
 
   const reveal = document.createElement("button");
   reveal.className = "icon-btn";

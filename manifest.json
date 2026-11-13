@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
-  "name": "🔎 Threat Intel Search",
-  "version": "2.0.0",
+  "name": "Threat Intel Search",
+  "version": "2.1.0",
   "description": "Right-click an IP, domain, or hash for a compact OSINT panel: one-click lookups, plus an optional score from your own API keys.",
   "permissions": ["contextMenus", "storage"],
   "optional_permissions": [

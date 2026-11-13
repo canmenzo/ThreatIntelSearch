@@ -43,25 +43,27 @@ when menus are registered (`onInstalled`/`onStartup` vs top level).
 ## Manual test
 
 1. Select `8.8.8.8` on any page, right-click, **Threat Intel Search > Analyze**.
-   A small panel window opens: IP badge, gray circle with a dash, "not enough data",
-   7 source buttons, and **Open all 7 IP sources**.
+   A small panel window opens: the address, IP selected, "No score yet" with an **Add keys**
+   button, 7 source buttons, and **Open all 7 IP sources**.
 2. Click one source: one tab opens in the original window. Click **Open all 7 IP sources**: 7 tabs.
 3. Select `hxxps://evil[.]com/login`, right-click, **Analyze**: the panel reuses its
    window and shows `evil.com` as DOMAIN.
-4. Select a SHA256 or MD5, **Analyze**: HASH is auto-selected and the algorithm shows
-   next to the badge.
+4. Select a SHA256 or MD5, **Analyze**: Hash is auto-selected and the algorithm shows
+   on the same row. Select a log line holding an IP and a domain: the first one is looked
+   up and the other is listed after "Also selected".
 5. No panel for the forced types. Select `8.8.8.8`, **I (IP Address)**: 4 tabs
    (VirusTotal, OTX, AbuseIPDB, MaxMind) open right after the current tab, in order.
    `hxxps://evil[.]com/login` with **D (Domain)**: 3 tabs for `evil.com`. A hash with
    **H (Hash)**: 1 VirusTotal tab.
 6. Gear icon > settings. Paste a dummy key (e.g. `test`) into VirusTotal and click
    **Save and test keys**. Accept the site access prompt (Firefox also asks to share website content). The status should read
-   **key rejected**. Look up an IP again: the breakdown says `VT key rejected`, the
+   **Key rejected**. Look up an IP again: the VirusTotal row says `Key rejected`, the
    circle stays gray, links still work.
 7. With a real free key: the circle fills in, a confidence line appears, and an
-   evidence row reads like `VirusTotal 0/94 engines`. A second lookup of the same
-   indicator within 30 minutes says "cached N min ago"; **refresh** re-queries.
-   Press `1` to open the first source, `D` to copy the indicator defanged.
+   evidence row reads like `VirusTotal 0/94 engines` with a meter beside it, and a context
+   line (network, country) appears under the address. A second lookup of the same
+   indicator within 30 minutes says "Cached N min ago"; **Refresh** (or `R`) re-queries.
+   Press `1` to open the first source, `D` to copy the indicator defanged, `O` to open all.
 8. Untick **Fetch a score when I open a lookup**: no API requests at all.
 
 ## Package
@@ -71,10 +73,10 @@ PowerShell 5.1's `Compress-Archive` writes backslashes, which the stores can rej
 
 ```powershell
 # Firefox / AMO
-tar.exe --format zip -cf threat_intel_search-2.0.0.xpi manifest.json background.js common.js icons.js ui.css panel.html panel.js options.html options.js icons
+tar.exe --format zip -cf threat_intel_search-2.1.0.xpi manifest.json background.js common.js icons.js ui.css panel.html panel.js options.html options.js icons
 
 # Chrome Web Store (leaves out chrome/store/)
-tar.exe --format zip -cf threat_intel_search-chrome-2.0.0.zip -C chrome manifest.json background.js common.js icons.js ui.css panel.html panel.js options.html options.js icons
+tar.exe --format zip -cf threat_intel_search-chrome-2.1.0.zip -C chrome manifest.json background.js common.js icons.js ui.css panel.html panel.js options.html options.js icons
 ```
 
 `npx web-ext lint --source-dir . --ignore-files "chrome/**" "*.md" LICENSE` runs Mozilla's

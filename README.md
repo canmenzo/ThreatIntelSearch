@@ -9,6 +9,19 @@ Right-click an IP, domain, or file hash and get a compact lookup panel: every OS
 
 ---
 
+### What's new in v2.1
+
+- **Redesigned panel**: flatter and calmer, with color reserved for the verdict. Every label is sentence case.
+- **Context line** under the indicator: network owner, usage type, country, Tor exit, registrar, file type and name, taken from the vendor answers you already pay quota for.
+- **Evidence you can read**: each vendor row has a meter showing how hard it pushed the score and which way, and a second line saying why.
+- **Smarter score**: detections from major engines count extra, VirusTotal categories and sandbox verdicts are used, signed and vendor-distributed files lean clean, abuse reports on CDN addresses count half, and a strong detection that another vendor contradicts is held at Suspicious instead of cancelling out to clean.
+- **Several indicators in one selection**: select a whole log line and the other IPs, domains and hashes in it are one click away.
+- **Refang**: also handles `[://]`, `[@]`, `[at]` and `.`.
+- **Shortcuts**: `R` refreshes the score, `O` opens every source.
+- The right-click entries use the extension icon instead of an emoji.
+
+---
+
 ### ✨ What's new in v2
 
 - 🪟 **Lookup panel** from the new **Analyze** menu entry, which auto-detects the type
@@ -38,7 +51,7 @@ Right-click an IP, domain, or file hash and get a compact lookup panel: every OS
 
 ### 🎯 The score (optional)
 
-Add free API keys in settings (gear icon in the panel). When you open a lookup, the circle fills in: **likely clean** (0-24), **suspicious** (25-59), or **malicious** (60-100), with a **confidence** line (high / medium / low / sources disagree). One row per vendor shows what it found; click a row to open that vendor's page.
+Add free API keys in settings (gear icon in the panel). When you open a lookup, the circle fills in: **Likely clean** (1-24), **Suspicious** (25-59), or **Malicious** (60-99), with a **confidence** line (high / medium / low / sources disagree). One row per vendor shows what it found, why, and how hard it pushed the score; click a row to open that vendor's page.
 
 #### How the score works
 
@@ -46,16 +59,18 @@ Each vendor's answer becomes **evidence** (log-odds): positive pushes toward mal
 
 | Source | Covers | Toward malicious | Toward clean |
 |---|---|---|---|
-| VirusTotal | IP, domain, hash | engines flagging it (suspicious counts half) on a log curve; files need more hits than IPs/domains; bad community reputation; domain registered in the last 30 days | zero detections; good reputation; domain in a top 10k / 100k list |
-| AbuseIPDB | IP | abuse confidence score over the last 90 days (halved with a single reporter) | allowlisted |
+| VirusTotal | IP, domain, hash | engines flagging it (suspicious counts half) on a log curve, with extra weight when major engines (Microsoft, Kaspersky, ESET, Google Safebrowsing and the like) are among them; files need more hits than IPs/domains; a domain categorized as phishing or malware; sandboxes calling a file malicious; bad community reputation; domain registered in the last 30 days | zero detections; a few hits from long-tail engines only; a file with a valid signature or a known distributor (ignored once 5+ engines flag it); good reputation; domain in a top 10k / 100k list |
+| AbuseIPDB | IP | abuse confidence score over the last 90 days (halved with a single reporter, and again on CDN or search-engine addresses) | allowlisted |
 | AlienVault OTX | IP, domain, hash | pulse count on a log curve plus named malware families / adversaries, capped | allowlisted / known false positive for this exact domain or IP |
 
 - "Not found", "0 reports" and "0 pulses" are absence of evidence, not proof of clean.
 - Infrastructure goes stale and gets shared, so for IPs and domains: a VT scan or newest OTX pulse over a year old counts half; OTX pulses on a CDN address count for nothing; and an IP or domain tied to more than 10 unrelated malware families in OTX (cloud front doors, code hosting) counts a third. OTX allowlists inherited from a parent domain (`evil.duckdns.org` from `duckdns.org`) are ignored.
 - If only one vendor had evidence and it was weak, the score is **capped at 59**, so one weak signal never reads as "malicious". Strong single-vendor evidence (e.g. 60/72 VT engines on a file) isn't capped.
 - **High** confidence needs at least two vendors leaning the same way; **sources disagree** means one points to malicious and another to clean.
-- No keys or no answers means a gray circle and **not enough data**. The links work either way.
-- Results are cached locally for 30 minutes (**refresh** bypasses it). Rejected keys (401/403) are flagged in settings; rate limits (429) show in the panel.
+- When a strong detection is contradicted by another vendor (say 8 VT engines on an allowlisted address), the score is **held at 30**: calling something clean by mistake costs more than a second look.
+- The scale stops at 1 and 99. A heuristic is never certain.
+- No answers means a gray circle and **Not enough data**. Unknown is not the same as clean. The links work either way.
+- Results are cached locally for 30 minutes (**Refresh** bypasses it). Rejected keys (401/403) are flagged in settings; rate limits (429) show in the panel.
 
 The score is a convenience heuristic, not a verdict.
 

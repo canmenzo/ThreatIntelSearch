@@ -4,11 +4,11 @@
 importScripts("common.js");
 
 const MENU = [
-  { id: "analyze", title: "🔎 Analyze" },
+  { id: "analyze", title: "Analyze" },
   { id: "sep", type: "separator" },
-  { id: "ip", title: "🔎 I (IP Address)" },
-  { id: "domain", title: "🔎 D (Domain)" },
-  { id: "hash", title: "🔎 H (Hash)" }
+  { id: "ip", title: "I (IP Address)" },
+  { id: "domain", title: "D (Domain)" },
+  { id: "hash", title: "H (Hash)" }
 ];
 const SOURCES = {
   ip: [
@@ -52,7 +52,7 @@ async function openPanel(query, windowId) {
 api.contextMenus.onClicked.addListener((info, tab) => {
   const raw = (info.selectionText || "").trim();
   if (info.menuItemId === "analyze") {
-    const query = new URLSearchParams({ ioc: normalize(raw, ""), type: "", raw: raw.slice(0, 300), win: tab?.windowId ?? "" });
+    const query = new URLSearchParams({ ioc: normalize(raw, ""), type: "", raw: raw.slice(0, 1000), win: tab?.windowId ?? "" });
     openPanel(query.toString(), tab?.windowId);
     return;
   }

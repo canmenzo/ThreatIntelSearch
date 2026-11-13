@@ -25,7 +25,7 @@ Threat Intel Search is for analysts who are tired of opening five tabs to check 
 Select an IP address, domain, or file hash on any page, right-click, and pick "Analyze" (auto-detects the type) for the lookup panel, or I (IP Address), D (Domain), or H (Hash) to open the classic sources straight in new tabs (IP: VirusTotal, AlienVault OTX, AbuseIPDB, MaxMind; Domain: VirusTotal, AlienVault OTX, AbuseIPDB; Hash: VirusTotal). The selection is cleaned up first: quotes and URL schemes are stripped, URLs are reduced to their host, and defanged indicators like evil[.]com or hxxp:// are refanged.
 
 Analyze opens a small panel with:
-- the indicator, copyable, with its type
+- the indicator, copyable, with its type and a context line (network owner, country, file type) once vendors answer
 - a score circle
 - one button per source, each opening that single lookup
 - an "Open all" button that opens every source for the type at once
@@ -35,9 +35,11 @@ Sources:
 - Domain: VirusTotal, AlienVault OTX, AbuseIPDB, urlscan.io, SecurityTrails, Whois, crt.sh
 - Hash: VirusTotal, AlienVault OTX, MalwareBazaar, Hybrid Analysis
 
-Optional score: add your own free VirusTotal, AbuseIPDB, or AlienVault OTX API keys in settings and the circle fills in (likely clean / suspicious / malicious) with a confidence level and one row per vendor showing what it found. Evidence from each vendor is combined so a strong detection isn't diluted by a vendor that has never seen the indicator, allowlisted and very popular domains count toward clean, and a single weak signal is capped at "suspicious". It is a convenience heuristic, not a verdict. Without keys everything else works exactly the same.
+Optional score: add your own free VirusTotal, AbuseIPDB, or AlienVault OTX API keys in settings and the circle fills in (likely clean / suspicious / malicious) with a confidence level and one row per vendor showing what it found, why, and how hard it pushed the score. Evidence from each vendor is combined so a strong detection isn't diluted by a vendor that has never seen the indicator, allowlisted and very popular domains count toward clean, and a single weak signal is capped at "suspicious". It is a convenience heuristic, not a verdict. Without keys everything else works exactly the same.
 
-Keyboard shortcuts: 1-9 open a source, C copies the indicator, D copies it defanged.
+Select a whole log line and every indicator in it is one click away.
+
+Keyboard shortcuts: 1-9 open a source, O opens them all, C copies the indicator, D copies it defanged, R refreshes the score.
 
 Built for SOC analysts, incident responders, and threat hunters triaging alerts.
 

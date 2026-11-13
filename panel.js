@@ -7,18 +7,20 @@ const originWindow = params.get("win") ? Number(params.get("win")) : null;
 const detected = detect(ioc);
 const ARTICLE = { ip: "an IP address", domain: "a domain", hash: "a file hash" };
 const PLURAL = { ip: "IPs", domain: "domains", hash: "hashes" };
-const VERDICT_ICON = { clean: "ShieldDone", sus: "Danger", mal: "ShieldFail" };
-const CIRC = 2 * Math.PI * 42;
-const HOW_URL = "https://github.com/canmenzo/ThreatIntelSearch#how-the-score-works";
 const NAME = { ip: "IP", domain: "domain", hash: "hash" };
+const ALGO = { md5: "MD5", sha1: "SHA-1", sha256: "SHA-256" };
+const CIRC = 2 * Math.PI * 44;
+const METER_FULL = 4; // log-odds that fill a vendor's meter
+const HOW_URL = "https://github.com/canmenzo/ThreatIntelSearch#how-the-score-works";
 const $ = (id) => document.getElementById(id);
 const REDUCED_MOTION = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 let current = TYPES.includes(params.get("type")) ? params.get("type") : detected;
 let myWindowId = null;
 let run = 0;
-let shownPct = 0;
+let shownScore = 0;
 let countFrame = 0;
+let scored = false;
 
 // One panel at a time: the background hands new lookups to this window instead of opening another.
 api.runtime.onMessage.addListener((msg, sender, sendResponse) => {
@@ -52,6 +54,8 @@ function linkButton(text, onclick) {
   return b;
 }
 
+const capital = (s) => s[0].toUpperCase() + s.slice(1);
+
 async function openTabs(urls) {
   for (const [i, url] of urls.entries()) {
     const opts = { url, active: i === 0 };
@@ -64,7 +68,7 @@ let toastTimer;
 async function copy(text, message, button) {
   let ok = true;
   try { await navigator.clipboard.writeText(text); } catch { ok = false; }
-  $("toast").textContent = ok ? message : "copy failed";
+  $("toast").textContent = ok ? message : "Copy failed";
   $("toast").classList.add("show");
   if (ok) button.classList.add("done");
   if (ok && button === $("copy")) button.replaceChildren(icon("TickSquare"));
@@ -81,8 +85,8 @@ const defanged = () => ioc.replace(/\./g, "[.]").replace(/:/g, "[:]");
 function setType(type) {
   current = type;
   for (const b of $("types").querySelectorAll("button")) b.classList.toggle("active", b.dataset.type === type);
-  $("algo").textContent = type === "hash" && detected === "hash" ? hashAlgo(ioc).toUpperCase() : "";
-  $("defang").hidden = !ioc || type === "hash";
+  $("algo").textContent = type === "hash" && detected === "hash" ? ALGO[hashAlgo(ioc)] : "";
+  $("defang").hidden = $("hint-defang").hidden = !ioc || type === "hash";
   $("openall").hidden = !ioc || !type;
   if (type) $("open-all-label").textContent = `Open all ${SEARCH_TARGETS[type].length} ${NAME[type]} sources`;
   renderWarning();
@@ -99,7 +103,7 @@ function renderWarning() {
   else if (current === "ip" && isPrivateIp(ioc)) msg = "Private or reserved address. Public intel sources won't know it.";
   $("warn-text").replaceChildren(msg);
   if (current && detected && detected !== current) {
-    $("warn-text").append(linkButton(`Switch to ${detected.toUpperCase()}`, () => setType(detected)));
+    $("warn-text").append(linkButton(`Switch to ${NAME[detected]}`, () => setType(detected)));
   }
   $("warn").hidden = !msg;
 }
@@ -115,7 +119,6 @@ function renderSources() {
     const url = buildUrl(target, ioc);
     const b = el("button", "src");
     b.title = `${url}\nShortcut: ${i + 1}`;
-    b.style.setProperty("--i", i);
     b.append(el("kbd", null, String(i + 1)), el("span", "src-name", target.name), icon("ArrowUp"));
     b.onclick = () => openTabs([url]);
     box.append(b);
@@ -130,39 +133,48 @@ function vendorUrl(id) {
 function countUp(to) {
   cancelAnimationFrame(countFrame);
   if (REDUCED_MOTION) {
-    shownPct = to;
-    $("pct").textContent = `${to}%`;
+    shownScore = to;
+    $("pct").textContent = to;
     return;
   }
-  const from = shownPct;
+  const from = shownScore;
   const start = performance.now();
   const step = (now) => {
-    const t = Math.min(1, Math.max(0, now - start) / 400);
-    shownPct = Math.round(from + (to - from) * (1 - (1 - t) ** 3));
-    $("pct").textContent = `${shownPct}%`;
+    const t = Math.min(1, Math.max(0, now - start) / 500);
+    shownScore = Math.round(from + (to - from) * (1 - (1 - t) ** 3));
+    $("pct").textContent = shownScore;
     if (t < 1) countFrame = requestAnimationFrame(step);
   };
   countFrame = requestAnimationFrame(step);
 }
 
-function evidenceRow(id, r, i) {
+function evidenceRow(id, r) {
   const row = el("button", r ? "ev-row" : "ev-row pending");
-  row.style.setProperty("--i", i);
   const url = vendorUrl(id);
   if (url) {
     row.title = `Open ${API_SOURCES[id].name}`;
     row.onclick = () => openTabs([url]);
   }
-  const finding = r ? el("span", "ev-finding", r.finding) : el("span", "ev-finding skel");
-  if (r) finding.title = r.finding;
-  row.append(el("span", `dot ${r ? tone(r) : "none"}`), el("span", "ev-name", API_SOURCES[id].name), finding);
+  const t = r ? tone(r) : "none";
+  row.append(el("span", `dot ${t}`), el("span", "ev-name", API_SOURCES[id].name));
+  if (!r) {
+    row.append(el("span"), el("span", "skel"));
+    return row;
+  }
+  const llr = r.llr || 0;
+  const meter = el("span", `meter ${t}${llr < 0 ? " good" : ""}`);
+  meter.style.setProperty("--w", Math.min(1, Math.abs(llr) / METER_FULL).toFixed(2));
+  if (!r.error) meter.title = Math.abs(llr) < 0.05 ? "Doesn't move the score" : `Pushes the score toward ${llr > 0 ? "malicious" : "clean"}`;
+  row.append(meter, el("span", "ev-finding", r.finding), el("span", "ev-detail", r.detail || ""));
   return row;
 }
 
-// state: "none" | "loading" | a combine() result (or null) with rows
-function show(state, { note = "", action, rows = [], ids = [], checkedAt } = {}) {
-  const s = state && state !== "loading" && state !== "none" ? state.score : null;
-  const cls = state === "loading" ? "loading" : s == null ? "none" : s < 25 ? "clean" : s < 60 ? "sus" : "mal";
+// state: "empty" (nothing was looked up) | "loading" | a combine() result, or null when no vendor had evidence
+function show(state, { title = "", note = "", action, rows = [], ids = [], checkedAt } = {}) {
+  const ran = state !== "empty" && state !== "loading";
+  const s = ran && state ? state.score : null;
+  const cls = !ran ? state : s == null ? "none" : s < 25 ? "clean" : s < 60 ? "sus" : "mal";
+  scored = ran;
   $("score").className = `score ${cls}`;
   const arc = $("arc");
   if (s != null) {
@@ -176,28 +188,45 @@ function show(state, { note = "", action, rows = [], ids = [], checkedAt } = {})
 
   if (s == null) {
     cancelAnimationFrame(countFrame);
-    shownPct = 0;
-    $("pct").textContent = state === "loading" ? "" : "—";
+    shownScore = 0;
+    $("pct").textContent = "--";
   } else {
     countUp(s);
   }
-  $("label").textContent = state === "loading" ? "analyzing…" : verdict(s);
-  $("verdict-icon").replaceChildren(...(VERDICT_ICON[cls] ? [icon(VERDICT_ICON[cls])] : []));
+  $("label").textContent = state === "loading" ? "Analyzing…" : ran ? verdict(s) : title;
 
   const conf = $("confidence");
-  conf.replaceChildren(state === "loading" ? `querying ${plural(ids.length, "vendor")}` : note);
-  if (s != null) {
+  conf.title = "";
+  if (state === "loading") {
+    conf.textContent = `Querying ${plural(ids.length, "vendor")}`;
+  } else if (!ran) {
+    conf.textContent = note;
+  } else if (s == null) {
+    conf.textContent = rows.every((r) => r.error) ? "No vendor answered." : "No vendor has a record of it. Unknown is not the same as clean.";
+  } else {
     const n = plural(state.sources, "source");
-    conf.textContent = state.confidence === "mixed" ? `sources disagree · ${n}` : `${state.confidence} confidence · ${n}${state.capped ? " · capped" : ""}`;
-    conf.title = state.capped ? "Only one vendor had evidence and it was weak, so the score is held at 59." : "";
+    conf.textContent = state.confidence === "mixed" ? `Sources disagree · ${n}` : `${capital(state.confidence)} confidence · ${n}`;
+    if (state.capped) {
+      conf.textContent += ` · capped at ${SINGLE_SOURCE_CAP}`;
+      conf.title = "Only one vendor had evidence and it was weak, so the score stops short of malicious.";
+    } else if (state.floored) {
+      conf.textContent += ` · held at ${CONFLICT_FLOOR}`;
+      conf.title = "One vendor has a strong detection that another contradicts, so the score is not allowed to read as clean.";
+    }
   }
-  if (action) conf.append(el("br"), linkButton(action, () => api.runtime.openOptionsPage()));
+  $("score-action").hidden = !action;
+  $("score-action").textContent = action || "";
 
-  $("evidence").replaceChildren(...(state === "loading" ? ids.map((id, i) => evidenceRow(id, null, i)) : rows.map((r, i) => evidenceRow(r.id, r, i))));
+  if (state !== "loading") {
+    const facts = mergeFacts(rows);
+    $("facts").textContent = facts.join(" · ");
+    $("facts").hidden = !facts.length;
+  }
+  $("evidence").replaceChildren(...(state === "loading" ? ids.map((id) => evidenceRow(id)) : rows.map((r) => evidenceRow(r.id, r))));
   $("score-foot").hidden = !checkedAt;
   if (checkedAt) {
     const mins = Math.floor((Date.now() - checkedAt) / 60000);
-    $("cached").replaceChildren(icon("TimeCircle"), mins < 1 ? "checked just now" : `cached ${mins} min ago`);
+    $("cached").textContent = mins < 1 ? "Checked just now" : `Cached ${mins} min ago`;
   }
   fit();
 }
@@ -207,14 +236,14 @@ async function score(fresh = false) {
   const type = current;
   const { keys = {}, scoring = true, keyStatus = {} } = await api.storage.local.get(["keys", "scoring", "keyStatus"]);
   if (my !== run) return;
-  if (!type || detected !== type) return show("none");
-  if (type === "ip" && isPrivateIp(ioc)) return show("none", { note: "Private address, nothing to look up." });
-  if (!scoring) return show("none", { note: "Scoring is turned off.", action: "Settings" });
+  if (!type || detected !== type) return show("empty", { title: "No score", note: "The type has to match the indicator." });
+  if (type === "ip" && isPrivateIp(ioc)) return show("empty", { title: "No score", note: "Private address, nothing to look up." });
+  if (!scoring) return show("empty", { title: "Scoring is off", note: "Links only.", action: "Settings" });
   const ids = Object.keys(API_SOURCES).filter((id) => keys[id] && API_SOURCES[id].types.includes(type));
   if (!ids.length) {
     return Object.keys(keys).length
-      ? show("none", { note: `None of your API keys cover ${PLURAL[type]}.`, action: "Settings" })
-      : show("none", { note: "Links only. Add free API keys for a score.", action: "Add keys" });
+      ? show("empty", { title: "No score", note: `None of your API keys cover ${PLURAL[type]}.`, action: "Settings" })
+      : show("empty", { title: "No score yet", note: "Add a free API key to get one.", action: "Add keys" });
   }
   show("loading", { ids });
   const rows = await lookupAll(ids, type, keys, keyStatus, fresh);
@@ -231,15 +260,15 @@ async function lookupAll(ids, type, keys, keyStatus, fresh) {
   const rows = await Promise.all(ids.map(async (id) => {
     const k = `${CACHE_VERSION}|${id}|${type}|${ioc}`;
     if (cache[k] && !fresh) return { id, at: cache[k].at, ...cache[k].r };
-    if (keyStatus[id] === "rejected") return { id, finding: "key rejected", error: true };
-    if (!(await api.permissions.contains({ origins: [API_SOURCES[id].origin], ...DATA_COLLECTION }))) return { id, finding: "needs site access", error: true };
+    if (keyStatus[id] === "rejected") return { id, finding: "Key rejected", error: true };
+    if (!(await api.permissions.contains({ origins: [API_SOURCES[id].origin], ...DATA_COLLECTION }))) return { id, finding: "Needs site access", error: true };
     try {
       const r = await lookup(id, type, ioc, keys[id]);
       cache[k] = { at: now, r };
       keyStatus[id] = "ok";
       return { id, at: now, ...r };
     } catch (e) {
-      if (!(e instanceof LookupError)) return { id, finding: "bad response", error: true };
+      if (!(e instanceof LookupError)) return { id, finding: "Bad response", error: true };
       if (e.status !== "error") keyStatus[id] = e.status;
       return { id, finding: e.message, error: true };
     }
@@ -249,27 +278,40 @@ async function lookupAll(ids, type, keys, keyStatus, fresh) {
   return rows;
 }
 
-$("ioc").textContent = ioc || "(nothing selected)";
+const lookUp = (indicator) => { location.search = new URLSearchParams({ ioc: indicator, type: "", raw, win: params.get("win") || "" }); };
+
+$("ioc").textContent = ioc || "(Nothing selected)";
 if (raw && raw.trim().toLowerCase() !== ioc) {
-  $("raw").textContent = `from: ${raw}`;
+  $("raw").textContent = `From: ${raw}`;
+  $("raw").title = raw;
   $("raw").hidden = false;
+}
+// A selected log line can hold several indicators; the rest are one click away.
+const others = extract(raw).filter((t) => t !== ioc).slice(0, 4);
+if (others.length) {
+  $("others").append("Also selected", ...others.map((t) => linkButton(t, () => lookUp(t))));
+  $("others").hidden = false;
 }
 document.title = ioc ? `${ioc} · Threat Intel Search` : "Threat Intel Search";
 
 $("settings").onclick = () => api.runtime.openOptionsPage();
+$("score-action").onclick = () => api.runtime.openOptionsPage();
 $("how").onclick = () => openTabs([HOW_URL]);
 $("refresh").onclick = () => score(true);
-$("copy").onclick = () => copy(ioc, "copied", $("copy"));
-$("defang").onclick = () => copy(defanged(), "copied defanged", $("defang"));
+$("copy").onclick = () => copy(ioc, "Copied", $("copy"));
+$("defang").onclick = () => copy(defanged(), "Copied defanged", $("defang"));
 for (const b of $("types").querySelectorAll("button")) b.onclick = () => setType(b.dataset.type);
 $("open-all").onclick = () => openTabs(SEARCH_TARGETS[current].map((t) => buildUrl(t, ioc)));
 
 addEventListener("keydown", (e) => {
   if (e.ctrlKey || e.metaKey || e.altKey) return;
-  if (e.key === "Escape") window.close();
-  else if (e.key === "c" && ioc) copy(ioc, "copied", $("copy"));
-  else if (e.key === "d" && ioc && current !== "hash") copy(defanged(), "copied defanged", $("defang"));
-  else if (/^[1-9]$/.test(e.key)) document.querySelectorAll(".src")[e.key - 1]?.click();
+  const key = e.key.toLowerCase();
+  if (key === "escape") window.close();
+  else if (key === "c" && ioc) copy(ioc, "Copied", $("copy"));
+  else if (key === "d" && ioc && current !== "hash") copy(defanged(), "Copied defanged", $("defang"));
+  else if (key === "r" && scored) score(true);
+  else if (key === "o" && ioc && current) $("open-all").click();
+  else if (/^[1-9]$/.test(key)) document.querySelectorAll(".src")[key - 1]?.click();
 });
 
 setType(current);
