@@ -99,5 +99,5 @@ https://github.com/canmenzo/ThreatIntelSearch/blob/main/PRIVACY.md
 
 - Icon: `chrome/icons/icon128.png` (128x128)
 - Screenshots (1280x800, also usable on AMO), upload in this order:
-  1. `chrome/store/screenshot-1280x800.png`: the real right-click menu with Analyze and I / D / H.
+  1. `chrome/store/screenshot-1280x800.png`: the right-click menu with Analyze and I / D / H (drawn to match the browser menu, not a capture).
   2. `chrome/store/screenshot-2-1280x800.png`: the Analyze panel (real extension UI, sample vendor data).
