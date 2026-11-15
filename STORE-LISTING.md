@@ -20,28 +20,28 @@ Right-click an IP, domain, or hash for a compact OSINT panel: one-click lookups,
 
 **Description**
 ```
-Threat Intel Search is for analysts who are tired of opening five tabs to check one indicator.
+🔎 Threat Intel Search is for analysts who are tired of opening five tabs to check one indicator.
 
 Select an IP address, domain, or file hash on any page, right-click, and pick "Analyze" (auto-detects the type) for the lookup panel, or "I (IP Address)", "D (Domain)", or "H (Hash)" to open the standard reputation lookups straight in new tabs. The selection is cleaned up first: quotes and URL schemes are stripped, URLs are reduced to their host, and defanged indicators like evil[.]com or hxxp:// are refanged.
 
-Analyze opens a small panel with:
-- the indicator, copyable, with its type and a context line (network owner, country, file type) once lookups answer
-- a score circle
-- one button per source, each opening that single lookup: reputation, abuse reports, geolocation, internet scan data, certificate transparency, WHOIS, and malware sandboxes, depending on the indicator type
-- an "Open all" button that opens every source for the type at once
+🧭 Analyze opens a small panel with:
+- 📋 the indicator, copyable, with its type and a context line (network owner, country, file type) once lookups answer
+- 🎯 a score circle
+- 🔗 one button per source, each opening that single lookup: reputation, abuse reports, geolocation, internet scan data, certificate transparency, WHOIS, and malware sandboxes, depending on the indicator type
+- 🚀 an "Open all" button that opens every source for the type at once
 
-Optional score: add your own free API keys for up to three supported reputation services in settings and the circle fills in (likely clean / suspicious / malicious) with a confidence level and one row per service showing what it found, why, and how hard it pushed the score. Evidence is combined so a strong detection isn't diluted by a service that has never seen the indicator, allowlisted and very popular domains count toward clean, and a single weak signal is capped at "suspicious". It is a convenience heuristic, not a verdict. Without keys everything else works exactly the same.
+📊 Optional score: add your own free API keys for up to three supported reputation services in settings and the circle fills in (likely clean / suspicious / malicious) with a confidence level and one row per service showing what it found, why, and how hard it pushed the score. Evidence is combined so a strong detection isn't diluted by a service that has never seen the indicator, allowlisted and very popular domains count toward clean, and a single weak signal is capped at "suspicious". It is a convenience heuristic, not a verdict. Without keys everything else works exactly the same.
 
-Select a whole log line and every indicator in it is one click away.
+🧾 Select a whole log line and every indicator in it is one click away.
 
-Keyboard shortcuts: 1-9 open a source, O opens them all, C copies the indicator, D copies it defanged, R refreshes the score.
+⌨️ Keyboard shortcuts: 1-9 open a source, O opens them all, C copies the indicator, D copies it defanged, R refreshes the score.
 
-Built for SOC analysts, incident responders, and threat hunters triaging alerts.
+🛡️ Built for SOC analysts, incident responders, and threat hunters triaging alerts.
 
-Privacy: the extension collects nothing and has no servers, analytics, or telemetry. Keys and a 30-minute result cache stay in local extension storage. Indicators are only sent to the services you chose, only when you look one up, straight from your browser.
+🔒 Privacy: the extension collects nothing and has no servers, analytics, or telemetry. Keys and a 30-minute result cache stay in local extension storage. Indicators are only sent to the services you chose, only when you look one up, straight from your browser.
 
-Open source (MIT), with the full list of supported sources in the README: https://github.com/canmenzo/ThreatIntelSearch
-Also available for Firefox.
+💻 Open source (MIT), with the full list of supported sources in the README: https://github.com/canmenzo/ThreatIntelSearch
+🦊 Also available for Firefox.
 ```
 
 **Category**: Developer Tools (alternate: Workflow & Planning)
