@@ -22,20 +22,15 @@ Right-click an IP, domain, or hash for a compact OSINT panel: one-click lookups,
 ```
 Threat Intel Search is for analysts who are tired of opening five tabs to check one indicator.
 
-Select an IP address, domain, or file hash on any page, right-click, and pick "Analyze" (auto-detects the type) for the lookup panel, or I (IP Address), D (Domain), or H (Hash) to open the classic sources straight in new tabs (IP: VirusTotal, AlienVault OTX, AbuseIPDB, MaxMind; Domain: VirusTotal, AlienVault OTX, AbuseIPDB; Hash: VirusTotal). The selection is cleaned up first: quotes and URL schemes are stripped, URLs are reduced to their host, and defanged indicators like evil[.]com or hxxp:// are refanged.
+Select an IP address, domain, or file hash on any page, right-click, and pick "Analyze" (auto-detects the type) for the lookup panel, or IP Address, Domain, or Hash to open the standard reputation lookups straight in new tabs. The selection is cleaned up first: quotes and URL schemes are stripped, URLs are reduced to their host, and defanged indicators like evil[.]com or hxxp:// are refanged.
 
 Analyze opens a small panel with:
-- the indicator, copyable, with its type and a context line (network owner, country, file type) once vendors answer
+- the indicator, copyable, with its type and a context line (network owner, country, file type) once lookups answer
 - a score circle
-- one button per source, each opening that single lookup
+- one button per source, each opening that single lookup: reputation, abuse reports, geolocation, internet scan data, certificate transparency, WHOIS, and malware sandboxes, depending on the indicator type
 - an "Open all" button that opens every source for the type at once
 
-Sources:
-- IP: VirusTotal, AlienVault OTX, AbuseIPDB, MaxMind, GreyNoise, Shodan InternetDB, urlscan.io
-- Domain: VirusTotal, AlienVault OTX, AbuseIPDB, urlscan.io, SecurityTrails, Whois, crt.sh
-- Hash: VirusTotal, AlienVault OTX, MalwareBazaar, Hybrid Analysis
-
-Optional score: add your own free VirusTotal, AbuseIPDB, or AlienVault OTX API keys in settings and the circle fills in (likely clean / suspicious / malicious) with a confidence level and one row per vendor showing what it found, why, and how hard it pushed the score. Evidence from each vendor is combined so a strong detection isn't diluted by a vendor that has never seen the indicator, allowlisted and very popular domains count toward clean, and a single weak signal is capped at "suspicious". It is a convenience heuristic, not a verdict. Without keys everything else works exactly the same.
+Optional score: add your own free API keys for up to three supported reputation services in settings and the circle fills in (likely clean / suspicious / malicious) with a confidence level and one row per service showing what it found, why, and how hard it pushed the score. Evidence is combined so a strong detection isn't diluted by a service that has never seen the indicator, allowlisted and very popular domains count toward clean, and a single weak signal is capped at "suspicious". It is a convenience heuristic, not a verdict. Without keys everything else works exactly the same.
 
 Select a whole log line and every indicator in it is one click away.
 
@@ -43,9 +38,9 @@ Keyboard shortcuts: 1-9 open a source, O opens them all, C copies the indicator,
 
 Built for SOC analysts, incident responders, and threat hunters triaging alerts.
 
-Privacy: the extension collects nothing and has no servers, analytics, or telemetry. Keys and a 30-minute result cache stay in local extension storage. Indicators are only sent to the vendors you chose, only when you look one up, straight from your browser.
+Privacy: the extension collects nothing and has no servers, analytics, or telemetry. Keys and a 30-minute result cache stay in local extension storage. Indicators are only sent to the services you chose, only when you look one up, straight from your browser.
 
-Open source (MIT): https://github.com/canmenzo/ThreatIntelSearch
+Open source (MIT), with the full list of supported sources in the README: https://github.com/canmenzo/ThreatIntelSearch
 Also available for Firefox.
 ```
 
