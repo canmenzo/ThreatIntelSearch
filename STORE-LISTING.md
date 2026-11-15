@@ -22,7 +22,7 @@ Right-click an IP, domain, or hash for a compact OSINT panel: one-click lookups,
 ```
 Threat Intel Search is for analysts who are tired of opening five tabs to check one indicator.
 
-Select an IP address, domain, or file hash on any page, right-click, and pick "Analyze" (auto-detects the type) for the lookup panel, or IP Address, Domain, or Hash to open the standard reputation lookups straight in new tabs. The selection is cleaned up first: quotes and URL schemes are stripped, URLs are reduced to their host, and defanged indicators like evil[.]com or hxxp:// are refanged.
+Select an IP address, domain, or file hash on any page, right-click, and pick "Analyze" (auto-detects the type) for the lookup panel, or "I (IP Address)", "D (Domain)", or "H (Hash)" to open the standard reputation lookups straight in new tabs. The selection is cleaned up first: quotes and URL schemes are stripped, URLs are reduced to their host, and defanged indicators like evil[.]com or hxxp:// are refanged.
 
 Analyze opens a small panel with:
 - the indicator, copyable, with its type and a context line (network owner, country, file type) once lookups answer
@@ -56,7 +56,7 @@ Looks up a user-selected IP address, domain, or file hash on threat intelligence
 
 **Permission justification: contextMenus**
 ```
-Adds the "Analyze", "IP Address", "Domain", and "Hash" entries to the right-click menu. This is how every lookup starts; without it there is no way to trigger one.
+Adds the "Analyze", "I (IP Address)", "D (Domain)", and "H (Hash)" entries to the right-click menu. This is how every lookup starts; without it there is no way to trigger one.
 ```
 
 **Permission justification: storage**
@@ -73,8 +73,7 @@ www.virustotal.com, api.abuseipdb.com, and otx.alienvault.com are optional host 
 
 **Data usage**: check **Website content**. The only item is the text the user
 selected, which is sent to the vendor APIs the user configured, only when they
-open a lookup. It is never sent to the developer. (v1 sent nothing itself and
-checked nothing; v2's optional API calls are why this changes.)
+open a lookup. It is never sent to the developer.
 
 Then check all three certification boxes (no sale of data, no unrelated use, no
 creditworthiness use).
